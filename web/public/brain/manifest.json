@@ -9,25 +9,92 @@
       "index": 1,
       "key": "auditory_engagement",
       "name": "Auditory / speech-music",
-      "color": "#ffb13b"
+      "short": "AUD",
+      "color": "#ffb13b",
+      "reliability": "high",
+      "vertexCount": 932,
+      "parcels": [
+        "A1",
+        "A4",
+        "A5",
+        "LBelt",
+        "MBelt",
+        "PBelt",
+        "STGa",
+        "STSda",
+        "STSdp",
+        "STSva",
+        "STSvp"
+      ]
     },
     {
       "index": 2,
       "key": "language_message",
       "name": "Language / message",
-      "color": "#ff5a7a"
+      "short": "LANG",
+      "color": "#ff5a7a",
+      "reliability": "high",
+      "vertexCount": 541,
+      "parcels": [
+        "44",
+        "45",
+        "47l",
+        "IFJa",
+        "IFJp",
+        "IFSa",
+        "IFSp"
+      ]
     },
     {
       "index": 3,
       "key": "attention_salience",
       "name": "Attention + salience",
-      "color": "#9b8cff"
+      "short": "ATTN",
+      "color": "#9b8cff",
+      "reliability": "medium",
+      "vertexCount": 2261,
+      "parcels": [
+        "6a",
+        "AVI",
+        "FEF",
+        "FOP1",
+        "FOP2",
+        "FOP3",
+        "FOP4",
+        "FOP5",
+        "IPS1",
+        "LIPd",
+        "LIPv",
+        "MI",
+        "PFm",
+        "PGi",
+        "PGs",
+        "TPOJ1",
+        "TPOJ2",
+        "TPOJ3",
+        "VIP",
+        "a24pr",
+        "p24pr"
+      ]
     },
     {
       "index": 4,
       "key": "visual_motion",
       "name": "Visual / motion",
-      "color": "#3fd6c0"
+      "short": "VIS",
+      "color": "#3fd6c0",
+      "reliability": "medium",
+      "vertexCount": 323,
+      "parcels": [
+        "FST",
+        "LO1",
+        "LO2",
+        "LO3",
+        "MST",
+        "MT",
+        "V3CD",
+        "V4t"
+      ]
     }
   ],
   "files": {

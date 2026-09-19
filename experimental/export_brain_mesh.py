@@ -39,7 +39,7 @@ def family_map(percept):
             labels[indices] = index
     if not labels.any():
         raise ValueError("No Percept family matched any atlas parcel.")
-    return labels
+    return labels, groups
 
 
 def export(output_dir):
@@ -57,7 +57,7 @@ def export(output_dir):
         load_surf_data(fsaverage["sulc_left"]),
         load_surf_data(fsaverage["sulc_right"]),
     ]).astype(np.float32)
-    families = family_map(percept)
+    families, groups = family_map(percept)
     if len(coordinates) != DIMENSION or len(sulcal_depth) != DIMENSION:
         raise ValueError("Mesh, curvature and prediction dimensions disagree.")
     if not np.isfinite(coordinates).all() or not np.isfinite(sulcal_depth).all():
@@ -87,8 +87,10 @@ def export(output_dir):
         "vertex_order": "left-then-right",
         "vertexCount": len(positions),
         "faceCount": len(faces),
-        "families": [{"index": index, "key": key, "name": name, "color": color}
-                     for index, (key, name, _short, color, _reliability, _patterns)
+        "families": [{"index": index, "key": key, "name": name, "short": short, "color": color,
+                      "reliability": reliability, "vertexCount": int((families == index).sum()),
+                      "parcels": sorted(groups[index - 1])}
+                     for index, (key, name, short, color, reliability, _patterns)
                      in enumerate(percept.FAMILIES, start=1)],
         "files": {name: {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
                   for name, payload in files.items()},
