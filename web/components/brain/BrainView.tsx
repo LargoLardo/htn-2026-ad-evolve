@@ -36,6 +36,8 @@ interface MeshManifest {
     reliability: string;
     vertexCount: number;
     parcels: string[];
+    anatomy: string;
+    sources: { text: string; doi: string }[];
   }[];
 }
 
@@ -287,9 +289,25 @@ export default function BrainView({ run }: { run: Run }) {
                   </>
                 )}
               </dl>
+              <p className="text-[11px] leading-relaxed text-foreground-light">{detail.anatomy}</p>
               <p className="text-[11px] leading-relaxed text-foreground-lighter">
                 {detail.parcels.join(', ')}
               </p>
+              <ul className="flex flex-col gap-1 border-t border-border pt-2">
+                {detail.sources.map((source) => (
+                  <li key={source.doi} className="text-[10px] leading-relaxed text-foreground-lighter">
+                    {source.text}{' '}
+                    <a
+                      href={`https://doi.org/${source.doi}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="focus-ring text-brand-link underline underline-offset-2"
+                    >
+                      doi:{source.doi}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : (
             <p className="mt-2 rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-foreground-lighter">
