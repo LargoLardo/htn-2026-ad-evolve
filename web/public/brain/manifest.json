@@ -1,0 +1,62 @@
+{
+  "schema": "evolve-brain-mesh-v2",
+  "surface": "fsaverage5 pial",
+  "vertex_order": "left-then-right",
+  "vertexCount": 20484,
+  "faceCount": 40960,
+  "families": [
+    {
+      "index": 1,
+      "key": "auditory_engagement",
+      "name": "Auditory / speech-music",
+      "color": "#ffb13b"
+    },
+    {
+      "index": 2,
+      "key": "language_message",
+      "name": "Language / message",
+      "color": "#ff5a7a"
+    },
+    {
+      "index": 3,
+      "key": "attention_salience",
+      "name": "Attention + salience",
+      "color": "#9b8cff"
+    },
+    {
+      "index": 4,
+      "key": "visual_motion",
+      "name": "Visual / motion",
+      "color": "#3fd6c0"
+    }
+  ],
+  "files": {
+    "positions.f32": {
+      "bytes": 245808,
+      "sha256": "4ee3f122dd77c9172ae9fff2928144493b6ac24a0e71308c0c640a0c8c6f6879"
+    },
+    "indices.u32": {
+      "bytes": 491520,
+      "sha256": "6adc6920cb1c14d73beb0e6d7213da4e5d89de45dd13a8ab795b9b1e0f7b0169"
+    },
+    "sulc.f32": {
+      "bytes": 81936,
+      "sha256": "cbcf13e505061e2ef213e2c1ebcd56f5f835c4667d83c77bbabfe6c723610872"
+    },
+    "family.u8": {
+      "bytes": 20484,
+      "sha256": "7a612d4318b0a5d8bc23232a78e31e4d9b599661fbc5e5348f920f173069b299"
+    }
+  },
+  "source": {
+    "mesh": "FreeSurfer fsaverage5 pial surface and sulcal depth, as distributed with nilearn",
+    "citation": "https://doi.org/10.1006/nimg.1998.0396",
+    "license": "FreeSurfer Software License; see LICENSE-freesurfer.txt",
+    "modifications": "Hemispheres concatenated left-then-right, axes reordered to Y-up, centred on the bounding box, scaled by 1/100, written as little-endian binary."
+  },
+  "atlas": {
+    "name": "Glasser 2016 parcellation, grouped into Percept families",
+    "source": "worker/assets/glasser-fsaverage5.json via worker/percept_score.py",
+    "attribution": "worker/assets/ATTRIBUTION.md"
+  }
+}
