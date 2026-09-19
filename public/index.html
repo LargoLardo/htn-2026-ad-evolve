@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#f7f8fa">
   <title>Evolve — Creative evolution lab</title>
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/app.js"></script>
@@ -11,39 +11,57 @@
 <body>
   <aside class="sidebar">
     <a class="brand" href="/" aria-label="Evolve home"><span class="brand-mark">e<span>↗</span></span>evolve<span class="brand-dot">.</span></a>
-    <button class="nav-item active" id="nav-lab"><span data-icon="flask"></span> Lab</button>
+    <div class="workspace-label">YOUR WORKSPACE <span>01</span></div>
+    <button class="nav-item active" id="nav-lab"><span data-icon="flask"></span> Creative lab <span class="nav-count">β</span></button>
     <button class="nav-item" id="nav-runs"><span data-icon="layers"></span> Experiments <span id="run-count" class="nav-count">0</span></button>
-    <button class="nav-item" id="nav-how"><span data-icon="network"></span> How it works</button>
-    <div class="recent-label">RECENT</div>
-    <div id="recent-runs" class="recent-runs"></div>
+    <button class="nav-item" id="nav-how"><span data-icon="network"></span> The evolution loop</button>
+    <div class="recent-label">RECENT EXPERIMENTS</div>
+    <div id="recent-runs" class="recent-runs"><p>Your next great ad<br>starts with a first run.</p></div>
     <div class="sidebar-bottom">
-      <button class="nav-item" id="nav-connections"><span data-icon="sliders"></span> Connections <span class="connection-dot"></span></button>
+      <div class="lab-note"><span class="small-star">✳</span><strong>Make room for the unexpected.</strong><p>A little exploration keeps every generation interesting.</p></div>
+      <button class="nav-item" id="nav-connections"><span data-icon="sliders"></span> Model connections <span class="connection-dot"></span></button>
+      <div class="workspace-user"><span class="avatar">Y</span><div>Your local workspace<small>Prototype · v0.1</small></div><span class="local-dot"></span></div>
     </div>
   </aside>
   <main>
-    <span class="pill" id="mode-badge" hidden><i></i> Demo</span>
+    <header class="topbar"><div>Workspace <span>/</span> <strong>Creative lab</strong></div><div class="top-actions"><span class="pill" id="mode-badge"><i></i> Demo workspace</span><button class="icon-button" id="help" aria-label="How Evolve works"><span data-icon="help"></span></button></div></header>
     <div class="page">
+      <section class="page-heading"><div><div class="eyebrow">IDEAS GET BETTER TOGETHER</div><h1>Creative evolution<span>.</span></h1><p>Start with a product. Discover the creative worth making.</p></div><button class="button secondary" id="new-run"><span data-icon="plus"></span> New experiment</button></section>
+      <div class="steps" aria-label="Evolution pipeline"><div><span>01</span><strong>Brief & research</strong></div><b>→</b><div><span>02</span><strong>Generate a population</strong></div><b>→</b><div><span>03</span><strong>Score & evolve</strong></div><b>→</b><div><span>04</span><strong>Meet the finalists</strong></div></div>
       <div class="lab-layout">
         <section class="brief-panel panel">
-          <div class="panel-heading"><h2>Brief</h2></div>
+          <div class="panel-heading"><div><span class="section-kicker">THE STARTING POINT</span><h2>Your creative brief</h2></div><span data-icon="sparkles" class="muted-icon"></span></div>
           <form id="brief-form">
-            <div class="field"><label for="product">Product name</label><input id="product" name="product" maxlength="100" required placeholder="e.g. PULSE"></div>
-            <div class="field"><label for="description">What makes it different?</label><textarea id="description" name="description" rows="2" maxlength="4000" required placeholder="e.g. A botanical sparkling water with bright citrus, no added sugar."></textarea></div>
-            <div class="field"><label for="audience">Who is it for?</label><input id="audience" name="audience" maxlength="500" required placeholder="e.g. Creative professionals looking for an afternoon reset"></div>
-            <div class="field"><label for="goal">What should the ad achieve?</label><textarea id="goal" name="goal" rows="2" maxlength="800" required placeholder="e.g. Make an everyday break feel refreshing and desirable."></textarea></div>
+            <div class="field"><label for="product">Product name</label><input id="product" name="product" value="PULSE" maxlength="100" required placeholder="What are we making an ad for?"></div>
+            <div class="field"><label for="description">What makes it different?</label><textarea id="description" name="description" rows="3" maxlength="4000" required>A botanical sparkling water with bright citrus, no added sugar, and a little more personality. Made for the everyday reset.</textarea></div>
+            <div class="field"><label for="audience">Who is it for?</label><input id="audience" name="audience" value="Creative professionals looking for an afternoon reset" maxlength="500" required></div>
+            <div class="field"><label for="goal">What should the ad achieve?</label><textarea id="goal" name="goal" rows="2" maxlength="800" required>Make an everyday break feel refreshing and desirable. Inspire people to try PULSE.</textarea></div>
             <div class="form-divider"></div>
+            <div class="label-line"><label>How should it feel?</label><span>Relative priorities</span></div>
+            <p class="field-hint">Guide the creative tone. These are not measured emotional responses.</p>
             <div id="emotion-controls"></div>
             <div class="form-divider"></div>
-            <div class="number-grid"><div class="field"><label for="rounds">Rounds</label><input id="rounds" name="rounds" type="number" min="1" max="6" value="3" required></div><div class="field"><label for="population">Per round</label><input id="population" name="population" type="number" min="4" max="16" value="8" required></div><div class="field"><label for="shortlist">Shortlist</label><input id="shortlist" name="shortlist" type="number" min="1" max="8" value="3" required></div></div>
-            <details class="advanced"><summary>Advanced <span>+</span></summary><div class="field"><label for="mode">Generation</label><select id="mode" name="mode"><option value="demo">Demo · local illustrations</option value="live" disabled>Live · connect an API key</option></select></div><div class="field"><label for="scorer">Scoring</label><select id="scorer" name="scorer"><option value="proxy">Design heuristic · unvalidated</option value="tribe" disabled>TRIBE · connect a calibrated worker</option></select></div><div class="field"><label for="seed">Seed</label><input id="seed" name="seed" type="number" min="0" max="2147483647" value="42" required></div></details>
+            <div class="label-line"><label for="rounds">Evolution settings</label><span class="tiny-badge">FAST SEARCH</span></div>
+            <div class="number-grid"><div class="field"><label for="rounds">Rounds</label><input id="rounds" name="rounds" type="number" min="1" max="6" value="3" required></div><div class="field"><label for="population">Concepts / round</label><input id="population" name="population" type="number" min="4" max="16" value="8" required></div><div class="field"><label for="shortlist">Shortlist / round</label><input id="shortlist" name="shortlist" type="number" min="1" max="8" value="3" required></div></div>
+            <div class="budget-note"><span data-icon="bolt"></span><span id="budget-note">Screen 24 concepts; render up to 9 shortlisted drafts.</span></div>
+            <details class="advanced"><summary>Models & reproducibility <span>+</span></summary><div class="field"><label for="mode">Generation</label><select id="mode" name="mode"><option value="demo">Demo · local illustrations</option value="live" disabled>Live · connect an API key</option></select></div><div class="field"><label for="scorer">Scoring</label><select id="scorer" name="scorer"><option value="proxy">Design heuristic · unvalidated</option value="tribe" disabled>TRIBE patterns · connect feature endpoint</option></select></div><div class="field" id="neural-target-field" hidden><label for="neuralTarget">Experimental pattern tie-break</label><select id="neuralTarget" name="neuralTarget"><option value="dorsal_attention">Dorsal attention network</option><option value="visual">Visual network</option><option value="ventral_attention">Salience / ventral attention network</option><option value="control">Control network</option><option value="default">Default network</option><option value="limbic">Limbic network</option><option value="somatomotor">Somatomotor network</option></select><p class="field-hint">Pattern similarity, not a measurement of attention or emotion.</p></div><div class="field"><label for="seed">Random seed</label><input id="seed" name="seed" type="number" min="0" max="2147483647" value="42" required></div><p class="field-hint">A fixed seed makes the demo repeatable. Live model outputs can vary.</p></details>
             <div id="form-error" role="alert" hidden></div>
-            <button class="button primary run-button" id="start-run" type="submit"><span>Start evolution</span></button>
-            <p class="form-footnote" id="mode-note"></p>
+            <button class="button primary run-button" id="start-run" type="submit"><span data-icon="sparkles"></span><span>Start evolution</span><span>↗</span></button>
+            <p class="form-footnote" id="mode-note">No API key needed. Demo research and scores are illustrative.</p>
           </form>
         </section>
         <div class="results-column">
           <section id="empty-state" class="empty-state panel">
-            <h2>Run an experiment to get started.</h2>
+            <div class="empty-top"><span class="pill neutral"><span data-icon="network"></span> THE EVOLUTION ENGINE</span><span class="edition">001 — AN OPEN EXPLORATION</span></div>
+            <h2>One brief.<br>Many possibilities.<br><em>Better every round.</em></h2>
+            <p class="empty-description">Competing ideas. Inherited strengths. Unexpected mutations.<br>Give your next ad a little room to evolve.</p>
+            <div class="evolution-art" aria-label="Diagram: a creative brief branches into three concepts, which contribute to an evolved finalist">
+              <div class="art-source"><span data-icon="sparkles"></span> Your brief</div>
+              <div class="branch-line"></div>
+              <div class="art-cards"><div class="art-card peach"><div class="art-label">CONCEPT 01 <span>↗</span></div><div class="orb orb-one"><i></i></div><strong>A moment<br>of possibility.</strong><span class="art-gene">Curiosity + contrast</span></div><div class="art-card green"><div class="art-label">CONCEPT 02 <span>↗</span></div><div class="orb orb-two"><i></i></div><strong>Feel a little<br>more alive.</strong><span class="art-gene">Joy + movement</span></div><div class="art-card lilac"><div class="art-label">CONCEPT 03 <span>↗</span></div><div class="orb orb-three"><i></i></div><strong>The good<br>kind of different.</strong><span class="art-gene">Desire + discovery</span></div></div>
+              <div class="branch-line lower"></div><div class="art-result"><span>✳</span> The strongest ideas become parents <span>↗</span></div>
+            </div>
+            <div class="empty-bottom"><span><i></i> Keep the strengths</span><span><i></i> Explore new directions</span><span><i></i> See what changed</span></div>
           </section>
           <section id="run-workspace" hidden>
             <div class="run-banner panel"><div><span class="section-kicker" id="run-label">EXPERIMENT</span><h2 id="run-title"></h2><p id="run-stage" role="status" aria-live="polite"></p></div><button class="button secondary compact" id="cancel-run">Stop run</button><a class="button secondary compact" id="export-run" hidden download><span data-icon="download"></span> Export run</a></div>
@@ -53,9 +71,10 @@
             <div class="results-toolbar"><div class="result-tabs" role="tablist" aria-label="Experiment views"><button role="tab" aria-selected="true" class="active" data-view="candidates">Creatives</button><button role="tab" aria-selected="false" data-view="lineage">Lineage</button><button role="tab" aria-selected="false" data-view="research">Research</button><button role="tab" aria-selected="false" data-view="log">Run log</button></div><span id="run-state" class="tiny-badge"></span></div>
             <div id="result-content"></div>
           </section>
+          <div class="principle-note"><span data-icon="fingerprint"></span><div><strong>Every creative has a genome.</strong><p>Hooks, visuals, emotional angles, proof, calls to action and palettes — all traceable across generations.</p></div><span class="note-arrow">↗</span></div>
         </div>
       </div>
-      <footer>EVOLVE<span>2026</span></footer>
+      <footer>EVOLVE / CREATIVE LAB <span>Built for exploration. Human validation still needed.</span><span>RESEARCH PROTOTYPE · 2026</span></footer>
     </div>
   </main>
   <dialog id="detail-dialog"><div class="dialog-top"><span class="section-kicker">CREATIVE INSPECTOR</span><button class="icon-button close-dialog" aria-label="Close creative inspector">✕</button></div><div id="detail-body"></div></dialog>

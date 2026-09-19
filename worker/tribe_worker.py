@@ -16,6 +16,10 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 PROTOCOL = "static-png-30s-silent-no-asr-25fps-1024-mean-after5-v1"
+LOSSLESS_PROTOCOL = "static-png-30s-silent-no-asr-25fps-1024-lossless-rgb-mean-after5-v2"
+SHORT_LOSSLESS_PROTOCOL = "static-png-10s-silent-no-asr-25fps-1024-lossless-rgb-mean-after5-v3"
+MPS_FIVE_SECOND_PROTOCOL = "static-png-5s-silent-no-asr-25fps-1024-lossless-rgb-mean-all-v4"
+MPS_STILL_PROTOCOL = "still-rgb-5s-silent-no-asr-inmemory-64frames-2hz-mean-all-v5"
 LABELS = ["joy", "trust", "curiosity", "desire"]
 CACHE = Path(os.environ.get("TRIBE_CACHE_DIR", "data/tribe-cache")).resolve()
 REVISION = os.environ.get("TRIBE_MODEL_REVISION", "")
@@ -24,6 +28,28 @@ TOKEN = os.environ.get("TRIBE_TOKEN", "")
 MODEL = None
 DECODER = None
 META = None
+
+
+def protocol_options(protocol):
+    if protocol in (MPS_FIVE_SECOND_PROTOCOL, MPS_STILL_PROTOCOL):
+        return 5, True
+    if protocol == SHORT_LOSSLESS_PROTOCOL:
+        return 10, True
+    if protocol == LOSSLESS_PROTOCOL:
+        return 30, True
+    if protocol == "static-png-30s-silent-no-asr-25fps-1024-mean-after5-v1":
+        return 30, False
+    raise ValueError("Unknown stimulus protocol.")
+
+
+def pool_predictions(predictions, protocol):
+    import numpy as np
+    protocol_options(protocol)  # Reject an unversioned change to pooling.
+    discard = 0 if protocol in (MPS_FIVE_SECOND_PROTOCOL, MPS_STILL_PROTOCOL) else 5
+    predictions = np.asarray(predictions, dtype=np.float32)
+    if predictions.ndim != 2 or predictions.shape[0] <= discard or not np.isfinite(predictions).all():
+        raise ValueError("Invalid or too-short TRIBE predictions.")
+    return predictions[discard:].mean(axis=0)
 
 
 def load_decoder():
@@ -60,8 +86,7 @@ def model():
     return MODEL
 
 
-def extract(candidate):
-    import numpy as np
+def validate_png(candidate):
     encoded = candidate.get("png_base64")
     if not isinstance(encoded, str) or len(encoded) > 24_000_000:
         raise ValueError("Invalid PNG payload.")
@@ -73,43 +98,52 @@ def extract(candidate):
     width, height = int.from_bytes(raw[16:20], "big"), int.from_bytes(raw[20:24], "big")
     if width != 1024 or height != 1024:
         raise ValueError("This calibration protocol requires a 1024 x 1024 PNG.")
+    return raw, media_hash
+
+
+def predict_png_reference(raw, loaded, protocol):
+    """Legacy MP4 route, also used for the direct-still startup parity check."""
+    duration, lossless = protocol_options(protocol)
+    with tempfile.TemporaryDirectory(prefix="ad-tribe-") as temp:
+        png, video = Path(temp) / "ad.png", Path(temp) / "ad.mp4"
+        png.write_bytes(raw)
+        video_codec = (["-c:v", "libx264rgb", "-crf", "0", "-preset", "ultrafast", "-pix_fmt", "rgb24"]
+                       if lossless else ["-c:v", "libx264", "-pix_fmt", "yuv420p"])
+        subprocess.run([os.environ.get("FFMPEG_BIN", "ffmpeg"), "-nostdin", "-loglevel", "error", "-y",
+                        "-loop", "1", "-i", str(png), "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+                        "-t", str(duration), "-r", "25", *video_codec,
+                        "-c:a", "aac", "-shortest", str(video)], check=True, timeout=120,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        import pandas as pd
+        from tribev2.demo_utils import get_audio_and_text_events
+        events = get_audio_and_text_events(pd.DataFrame([{
+            "type": "Video", "filepath": str(video), "start": 0,
+            "timeline": "default", "subject": "default",
+        }]), audio_only=True)
+        return loaded.predict(events=events, verbose=False)
+
+
+def extract(candidate):
+    import numpy as np
+    duration, _ = protocol_options(PROTOCOL)
+    raw, media_hash = validate_png(candidate)
     key = hashlib.sha256(f"{media_hash}:{REVISION}:{CODE_REVISION}:{PROTOCOL}".encode()).hexdigest()
     path = CACHE / "neural" / f"{key}.npz"
     start = time.monotonic()
     if path.exists():
         with np.load(path, allow_pickle=False) as cached:
             pooled, shape = cached["pooled"], cached["predictions"].shape
-        return pooled, media_hash, path, {"cached": True, "shape": list(shape), "elapsed_seconds": time.monotonic() - start}
-    with tempfile.TemporaryDirectory(prefix="ad-tribe-") as temp:
-        png, video = Path(temp) / "ad.png", Path(temp) / "ad.mp4"
-        png.write_bytes(raw)
-        # ponytail: one controlled presentation; validate new protocols before adding them.
-        subprocess.run([os.environ.get("FFMPEG_BIN", "ffmpeg"), "-nostdin", "-loglevel", "error", "-y",
-                        "-loop", "1", "-i", str(png), "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-                        "-t", "30", "-r", "25", "-c:v", "libx264", "-pix_fmt", "yuv420p",
-                        "-c:a", "aac", "-shortest", str(video)], check=True, timeout=120,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        loaded = model()
-        import pandas as pd
-        from tribev2.demo_utils import get_audio_and_text_events
-        # The upstream helper explicitly supports audio_only: keep video + silent
-        # audio events, skip expensive/hallucinated speech recognition on silence.
-        events = get_audio_and_text_events(pd.DataFrame([{
-            "type": "Video", "filepath": str(video), "start": 0,
-            "timeline": "default", "subject": "default",
-        }]), audio_only=True)
-        predictions, segments = loaded.predict(events=events, verbose=False)
+        return pooled, media_hash, path, {"cached": True, "shape": list(shape), "duration_seconds": duration, "elapsed_seconds": time.monotonic() - start}
+    predictions, segments = predict_png_reference(raw, model(), PROTOCOL)
     predictions = np.asarray(predictions, dtype=np.float32)
-    if predictions.ndim != 2 or predictions.shape[0] <= 5 or not np.isfinite(predictions).all():
-        raise ValueError("Invalid or too-short TRIBE predictions.")
     # Protocol hypothesis, not a claim about a scientifically optimal emotion feature.
-    pooled = predictions[5:].mean(axis=0)
+    pooled = pool_predictions(predictions, PROTOCOL)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, predictions=predictions, pooled=pooled)
     path.with_suffix(".json").write_text(json.dumps({"media_hash": media_hash, "model_revision": REVISION,
         "code_revision": CODE_REVISION, "protocol": PROTOCOL, "shape": list(predictions.shape),
         "segments": [str(segment) for segment in segments]}, indent=2))
-    return pooled, media_hash, path, {"cached": False, "shape": list(predictions.shape), "elapsed_seconds": time.monotonic() - start}
+    return pooled, media_hash, path, {"cached": False, "shape": list(predictions.shape), "duration_seconds": duration, "elapsed_seconds": time.monotonic() - start}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -160,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
             for candidate in candidates:
                 pooled, media_hash, feature_path, metadata = extract(candidate)
                 metadata.update({"model_revision": REVISION, "code_revision": CODE_REVISION, "protocol": PROTOCOL,
-                                 "uncertainty": "not-estimated", "duration_seconds": 30})
+                                 "uncertainty": "not-estimated", "duration_seconds": protocol_options(PROTOCOL)[0]})
                 result = {"id": candidate["id"], "media_hash": media_hash, "metadata": metadata}
                 if self.path == "/score":
                     import numpy as np

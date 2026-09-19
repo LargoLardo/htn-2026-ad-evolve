@@ -75,7 +75,7 @@ export async function createAppServer() {
         catch (error) { return json(response, error.status ?? 400, { error: error.message }); }
         const capabilities = providers.capabilities();
         if (brief.mode === 'live' && (!capabilities.liveResearch || !capabilities.liveImages)) return json(response, 400, { error: 'Configure live research and image providers before using live mode.' });
-        if (brief.scorer === 'tribe' && !capabilities.tribe) return json(response, 400, { error: 'TRIBE requires a configured external worker with a human-calibrated emotion readout.' });
+        if (brief.scorer === 'tribe' && !capabilities.tribe) return json(response, 400, { error: 'Experimental TRIBE patterns require a feature endpoint and frozen reference. Decoder training is paused.' });
         if (active.size >= LIMITS.activeRuns) return json(response, 429, { error: 'Two runs are already active. Wait for one to finish or cancel it.' });
         const run = createRun(brief);
         const controller = new AbortController();

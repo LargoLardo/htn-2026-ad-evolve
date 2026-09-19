@@ -1,0 +1,4 @@
+# Apple Silicon inference environment; separate from the lightweight trainer.
+-r ../deploy/baseten/requirements.in
+-r requirements.txt
+imageio-ffmpeg==0.6.0

@@ -1,5 +1,7 @@
 # Optional TRIBE v2 GPU worker
 
+> **Paused / archived experiment (2026-09-19).** The active app uses [training-free image review and network-pattern scoring](../experimental/README.md). Local model downloads and the 300-image job were stopped; existing features, decoder artifacts and partial downloads are preserved. The commands below describe historical methods. Download/extraction/trainer entry points now require deliberate per-command `EVOLVE_ENABLE_EXPERIMENTAL_TRAINING=1` to resume. Automatic `--train-when-complete` fitting is disabled. No training resumes when the app starts.
+
 The Node prototype runs without Python. This worker is an opt-in bridge to the [official TRIBE v2 implementation](https://github.com/facebookresearch/tribev2), **not a supplied pretrained emotion model**. It uses `TribeModel.from_pretrained`, the upstream `get_audio_and_text_events(..., audio_only=True)` helper, and `predict(events=...)`. The emitted emotional values are estimates of human ratings from a separately fitted ridge decoder, never raw brain activation relabeled as emotion.
 
 TRIBE code and weights are [CC-BY-NC-4.0](https://huggingface.co/facebook/tribev2). Resolve commercial licensing before using it for a commercial ad product. The text encoder requires gated Llama access. No GPU inference or paid OpenAI calls were available for this prototype's verification.
