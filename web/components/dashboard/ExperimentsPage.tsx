@@ -72,7 +72,7 @@ export default function ExperimentsPage({ duplicateOf }: { duplicateOf?: Brief |
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-16 text-center">
             <h2 className="text-lg text-foreground">No experiments yet</h2>
             <p className="max-w-[46ch] text-sm text-foreground-lighter">
-              Describe a product and Evolve will generate a population of ad concepts,
+              Describe a product and Advolve will generate a population of ad concepts,
               screen them, then recombine the survivors across generations.
             </p>
             <Button
@@ -132,7 +132,7 @@ export default function ExperimentsPage({ duplicateOf }: { duplicateOf?: Brief |
         description={
           active
             ? 'A run is already in progress. Two can run at once.'
-            : 'Describe the product. Evolve does the rest.'
+            : 'Describe the product. Advolve does the rest.'
         }
       >
         <BriefForm

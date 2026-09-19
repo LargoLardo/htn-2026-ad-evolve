@@ -30,7 +30,7 @@ async function proxy(request: NextRequest, path: string[]) {
     upstream = await fetch(target, { method: request.method, headers, body });
   } catch {
     return Response.json(
-      { error: `Could not reach the Evolve server at ${API_ORIGIN}. Is it running?` },
+      { error: `Could not reach the Advolve server at ${API_ORIGIN}. Is it running?` },
       { status: 502 }
     );
   }

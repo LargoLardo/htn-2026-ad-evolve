@@ -92,7 +92,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      <Dialog open={dialog === 'how'} onClose={() => setDialog(null)} label="The evolution loop">
+      <Dialog open={dialog === 'how'} onClose={() => setDialog(null)} label="How Advolve works">
         <div className="flex flex-col gap-4 text-sm text-foreground-light">
           <h2 className="text-2xl text-foreground">A population of ideas. A visible lineage.</h2>
           <ol className="flex list-decimal flex-col gap-2 pl-5">

@@ -15,7 +15,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
 export default function TopBar() {
   const pathname = usePathname();
 
-  const crumbs: { label: string; href?: string }[] = [{ label: 'Evolve', href: '/dashboard' }];
+  const crumbs: { label: string; href?: string }[] = [{ label: 'Advolve', href: '/dashboard' }];
   if (pathname.startsWith('/dashboard/runs/')) {
     crumbs.push({ label: 'Experiments', href: '/dashboard' });
     crumbs.push({ label: pathname.split('/').pop()?.slice(0, 8) ?? 'Run' });

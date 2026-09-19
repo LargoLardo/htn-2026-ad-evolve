@@ -1,18 +1,30 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-/** Wordmark only -- no icon tile. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <Link
       href="/"
-      aria-label="Evolve home"
-      className={cn(
-        'focus-ring rounded-md font-heading text-xl font-extrabold tracking-tight text-foreground',
-        className
-      )}
+      aria-label="Advolve home"
+      className={cn('focus-ring rounded-md', className)}
     >
-      evolve<span className="text-brand">.</span>
+      <Image
+        src="/advolve-logo.png"
+        alt="Advolve"
+        width={130}
+        height={26}
+        priority
+        className="hidden dark:block"
+      />
+      <Image
+        src="/advolve-logo-dark.png"
+        alt="Advolve"
+        width={130}
+        height={26}
+        priority
+        className="block dark:hidden"
+      />
     </Link>
   );
 }

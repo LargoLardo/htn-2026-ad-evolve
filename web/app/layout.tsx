@@ -4,7 +4,7 @@ import { dmSans, manrope } from '@/lib/fonts';
 import { Providers } from '@/components/layout/Providers';
 
 export const metadata: Metadata = {
-  title: 'Evolve | Creative evolution lab',
+  title: 'Advolve | Creative evolution lab',
   description:
     'An evolutionary creative lab: product brief to diverse ad genomes, screening, rendering and selection over successive generations.',
 };
