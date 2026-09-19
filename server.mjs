@@ -1,16 +1,18 @@
 import http from 'node:http';
+import { createReadStream } from 'node:fs';
 import { readFile, readdir, mkdir, rename, writeFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRun, evolveRun, LIMITS, validateBrief } from './lib/evolution.mjs';
-import * as providers from './lib/providers.mjs';
+import * as defaultProviders from './lib/providers.mjs';
+import { ingestMedia, getUploadedAsset, assetsDir, MAX_MEDIA_BYTES } from './lib/media.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, 'data', 'runs');
-const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.ttf': 'font/ttf' };
+const MIME = { '.mp4': 'video/mp4', '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.ttf': 'font/ttf' };
 
-async function save(run) {
-  const target = path.join(DATA, `${run.id}.json`);
+async function save(run, directory = DATA) {
+  const target = path.join(directory, `${run.id}.json`);
   await writeFile(`${target}.tmp`, JSON.stringify(run, null, 2));
   await rename(`${target}.tmp`, target);
 }
@@ -42,18 +44,18 @@ function localRequest(request) {
   } catch { return false; }
 }
 
-export async function createAppServer() {
-  await mkdir(DATA, { recursive: true });
+export async function createAppServer({ providers = defaultProviders, dataDir = DATA } = {}) {
+  await mkdir(dataDir, { recursive: true });
   const runs = new Map(); const active = new Map();
   // ponytail: local JSON files and two concurrent runs; use a durable job queue for multi-user hosting.
-  for (const name of await readdir(DATA)) {
+  for (const name of await readdir(dataDir)) {
     if (!/^[a-f\d-]{36}\.json$/i.test(name)) continue;
     try {
-      const run = JSON.parse(await readFile(path.join(DATA, name), 'utf8'));
+      const run = JSON.parse(await readFile(path.join(dataDir, name), 'utf8'));
       if (run.status === 'running') {
         run.status = 'failed'; run.stage = 'failed'; run.error = 'Server restarted before this run finished.';
         run.events.push({ time: new Date().toISOString(), message: run.error });
-        await save(run);
+        await save(run, dataDir);
       }
       runs.set(run.id, run);
     } catch (error) { console.warn(`Could not load a saved run: ${error.message}`); }
@@ -61,30 +63,50 @@ export async function createAppServer() {
   const server = http.createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
-    response.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+    response.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
     try {
       if (!localRequest(request)) return json(response, 403, { error: 'Only same-origin local requests are allowed.' });
       const url = new URL(request.url, `http://${request.headers.host}`);
       const pathname = decodeURIComponent(url.pathname);
       if (request.method === 'GET' && pathname === '/api/config') return json(response, 200, { ...providers.capabilities(), limits: LIMITS });
       if (request.method === 'GET' && pathname === '/api/runs') return json(response, 200, [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(run => ({ id: run.id, status: run.status, stage: run.stage, product: run.brief.product, createdAt: run.createdAt, metrics: run.metrics })));
+      if (request.method === 'POST' && pathname === '/api/media') {
+        const type = request.headers['content-type']?.split(';')[0];
+        if (!['image/png', 'image/jpeg', 'image/webp', 'video/mp4'].includes(type)) return json(response, 415, { error: 'Upload PNG, JPEG, WebP or MP4 media.' });
+        const chunks = []; let length = 0;
+        for await (const chunk of request) {
+          length += chunk.length;
+          if (length > MAX_MEDIA_BYTES) return json(response, 413, { error: 'Media exceeds 50 MiB.' });
+          chunks.push(chunk);
+        }
+        try {
+          const asset = await ingestMedia(Buffer.concat(chunks), type);
+          return json(response, 201, { id: asset.mediaHash, asset });
+        } catch (error) { return json(response, 400, { error: error.message }); }
+      }
       if (request.method === 'POST' && pathname === '/api/runs') {
         if (active.size >= LIMITS.activeRuns) return json(response, 429, { error: 'Two runs are already active. Wait for one to finish or cancel it.' });
         let brief;
         try { brief = validateBrief(await readJson(request)); }
         catch (error) { return json(response, error.status ?? 400, { error: error.message }); }
         const capabilities = providers.capabilities();
-        if (brief.mode === 'live' && (!capabilities.liveResearch || !capabilities.liveImages)) return json(response, 400, { error: 'Configure live research and image providers before using live mode.' });
-        if (brief.scorer === 'tribe' && !capabilities.tribe) return json(response, 400, { error: 'Experimental TRIBE patterns require a feature endpoint and frozen reference. Decoder training is paused.' });
+        if (!capabilities.liveResearch || !(brief.mediaType === 'video' ? capabilities.liveVideos : capabilities.liveImages)) return json(response, 400, { error: 'Configure OpenAI for research/review and the selected image or Seedance video provider.' });
+        if (brief.scorer === 'tribe' && !capabilities.tribe) return json(response, 400, { error: 'Percept scoring requires the updated TRIBE scoring endpoint. Decoder training is paused.' });
+        if (active.size >= LIMITS.activeRuns) return json(response, 429, { error: 'Two runs are already active. Wait for one to finish or cancel it.' });
+        if (brief.originalMediaId) {
+          try { brief.originalAsset = await getUploadedAsset(brief.originalMediaId); }
+          catch { return json(response, 400, { error: 'Original media is missing or invalid. Upload it again.' }); }
+          if (brief.originalAsset.mediaType !== brief.mediaType) return json(response, 400, { error: 'The original must match the selected image/video ad format.' });
+        }
         if (active.size >= LIMITS.activeRuns) return json(response, 429, { error: 'Two runs are already active. Wait for one to finish or cancel it.' });
         const run = createRun(brief);
         const controller = new AbortController();
         runs.set(run.id, run); active.set(run.id, controller);
-        try { await save(run); }
+        try { await save(run, dataDir); }
         catch (error) { runs.delete(run.id); active.delete(run.id); throw error; }
         json(response, 202, run);
-        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20 * 60 * 1_000)]);
-        void evolveRun(run, providers, { signal, onUpdate: save }).catch(error => {
+        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(90 * 60 * 1_000)]);
+        void evolveRun(run, providers, { signal, onUpdate: run => save(run, dataDir) }).catch(error => {
           run.status = 'failed'; run.stage = 'failed'; run.error = `Run storage failed: ${error.message}`;
           console.error(run.error);
         }).finally(() => active.delete(run.id));
@@ -105,7 +127,7 @@ export async function createAppServer() {
       if (pathname.startsWith('/api/')) return json(response, 404, { error: 'API route not found.' });
       if (!['GET', 'HEAD'].includes(request.method)) return json(response, 405, { error: 'Method not allowed.' });
       const asset = pathname.startsWith('/assets/');
-      const base = path.join(ROOT, asset ? 'data/assets' : 'public');
+      const base = asset ? assetsDir() : path.join(ROOT, 'public');
       const requested = asset ? pathname.slice('/assets/'.length) : pathname === '/' ? 'index.html' : pathname.slice(1);
       const target = path.resolve(base, requested);
       const relative = path.relative(base, target);
@@ -113,8 +135,23 @@ export async function createAppServer() {
       try {
         const info = await stat(target);
         if (!info.isFile() || !MIME[path.extname(target)]) return json(response, 404, { error: 'File not found.' });
-        response.writeHead(200, { 'Content-Type': MIME[path.extname(target)], 'Cache-Control': asset ? 'public, max-age=31536000, immutable' : 'no-cache', 'Content-Length': info.size });
-        response.end(request.method === 'HEAD' ? undefined : await readFile(target));
+        const headers = { 'Content-Type': MIME[path.extname(target)], 'Cache-Control': asset ? 'public, max-age=31536000, immutable' : 'no-cache', 'Accept-Ranges': 'bytes' };
+        let start = 0, end = info.size - 1, status = 200;
+        if (request.headers.range) {
+          const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range);
+          if (!range || (!range[1] && !range[2])) { response.writeHead(416, { 'Content-Range': `bytes */${info.size}` }); return response.end(); }
+          if (!range[1]) start = Math.max(0, info.size - Number(range[2]));
+          else { start = Number(range[1]); if (range[2]) end = Math.min(end, Number(range[2])); }
+          if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= info.size) { response.writeHead(416, { 'Content-Range': `bytes */${info.size}` }); return response.end(); }
+          status = 206; headers['Content-Range'] = `bytes ${start}-${end}/${info.size}`;
+        }
+        response.writeHead(status, { ...headers, 'Content-Length': end - start + 1 });
+        if (request.method === 'HEAD') return response.end();
+        const stream = createReadStream(target, { start, end });
+        response.on('close', () => stream.destroy());
+        stream.on('error', () => response.destroy());
+        stream.pipe(response);
+
       } catch (error) {
         if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return json(response, 404, { error: 'File not found.' });
         throw error;
@@ -125,7 +162,7 @@ export async function createAppServer() {
       console.error(error.message);
     }
   });
-  server.requestTimeout = 30_000;
+  server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
   server.on('close', () => { for (const controller of active.values()) controller.abort(new DOMException('Server closed.', 'AbortError')); });
   return server;

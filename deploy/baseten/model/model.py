@@ -1,4 +1,4 @@
-"""Baseten entry point for frozen TRIBE features and a separately fitted head."""
+"""Percept scoring worker; legacy feature/head endpoints remain experimental."""
 import base64
 import errno
 import hashlib
@@ -13,6 +13,10 @@ import numpy as np
 from affect_decoder import AffectDecoder, load_spec, spec_hash
 from clip_cache import install_exact_clip_cache
 import tribe_worker
+try:
+    import percept_worker
+except ImportError:
+    from worker import percept_worker
 
 
 def writable_cache(preferred, fallback):
@@ -45,6 +49,9 @@ class Model:
         self.secrets = kwargs.get("secrets", {})
         self.data_dir = Path(kwargs.get("data_dir", "data"))
         self.spec = load_spec()
+        self.percept_spec, self.percept_contract_hash = percept_worker.contract()
+        if any(self.spec[key] != self.percept_spec[key] for key in ['model_repo', 'model_revision', 'code_revision', 'encoders']):
+            raise ValueError('Loaded TRIBE/encoder pins must match the Percept scoring contract.')
         self.feature_spec_hash = spec_hash(self.spec)
         self.decoder = None
         self.lock = threading.Lock()
@@ -55,6 +62,9 @@ class Model:
         from huggingface_hub import snapshot_download
         from tribev2 import TribeModel
         from neuralset.extractors.base import HuggingFaceMixin
+
+        torch.set_float32_matmul_precision("high")
+        torch.backends.cudnn.allow_tf32 = True
 
         if not torch.cuda.is_available():
             raise RuntimeError("This deployment requires a CUDA GPU.")
@@ -88,7 +98,7 @@ class Model:
         tribe_worker.REVISION = self.spec["model_revision"]
         tribe_worker.CODE_REVISION = self.spec["code_revision"]
         print("Loading TRIBE checkpoint onto GPU...", flush=True)
-        tribe_worker.MODEL = TribeModel.from_pretrained(checkpoint, cache_folder=str(cache / "features"),
+        tribe_worker.MODEL = TribeModel.from_pretrained(checkpoint, cache_folder=str(cache / "percept-features-v1"),
             device="cuda", config_update=config_update)
         import neuralset.extractors.video as video_extractors
         self.clip_cache_stats = {"hits": 0, "misses": 0, "verification_forwards": 0}
@@ -107,10 +117,17 @@ class Model:
         action = model_input.get("action", "features")
         if action == "health":
             return {"feature_spec_hash": self.feature_spec_hash,
+                "percept_contract_hash": self.percept_contract_hash, "percept_version": self.percept_spec['version'],
                 "labels": ["valence", "arousal"], "decoder_version": self.decoder.metadata["version"] if self.decoder else None,
                 "runtime_versions": getattr(self, "runtime_versions", {}), "model_loaded": tribe_worker.MODEL is not None}
+        if action == "percept":
+            if tribe_worker.MODEL is None:
+                raise RuntimeError("TRIBE model is not loaded.")
+            with self.lock:
+                return percept_worker.score_batch(model_input, tribe_worker.MODEL, tribe_worker.CACHE,
+                    getattr(self, "runtime_versions", {}))
         if action not in ["features", "score"]:
-            raise ValueError("action must be health, features or score.")
+            raise ValueError("action must be health, percept, features or score.")
         if action == "score":
             if self.decoder is None:
                 raise ValueError("No affect decoder has been fitted and bundled. Use action=features first.")
@@ -141,6 +158,7 @@ class Model:
                     raw = np.asarray(pooled, dtype="<f4").tobytes()
                     result.update(pooled_f32_base64=base64.b64encode(raw).decode(), feature_dim=len(pooled),
                         pooled_sha256=hashlib.sha256(raw).hexdigest())
+
                 else:
                     result.update(affect=self.decoder.score(pooled), confidence=None,
                         provenance="Frozen TRIBE features + OASIS-fitted valence/arousal decoder; experimental estimated ratings.")

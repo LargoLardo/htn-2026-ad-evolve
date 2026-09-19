@@ -1,41 +1,16 @@
-// Read-only asset checks, then one explicitly offline demo experiment.
+// Existing local server only. Never starts a run or calls a paid provider.
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-const base = 'http://127.0.0.1:3000';
-const assets = ['/', '/app.js', '/style.css', '/fonts/fonts.css', '/fonts/dm-sans-400-700.woff2', '/fonts/manrope-400-800.woff2'];
-for (const path of assets) {
+const base = process.env.SMOKE_URL || 'http://127.0.0.1:3000';
+for (const path of ['/', '/app.js', '/style.css', '/fonts/fonts.css', '/fonts/dm-sans-400-700.woff2', '/fonts/manrope-400-800.woff2']) {
   const response = await fetch(base + path);
   assert.equal(response.status, 200, path);
   assert.ok((await response.arrayBuffer()).byteLength > 0, path);
 }
-const blocked = await fetch(base + '/api/runs', { method: 'POST', headers: { origin: 'https://example.org', 'content-type': 'application/json' }, body: '{}' });
+const config = await (await fetch(base + '/api/config')).json();
+assert.equal(config.videoModel, 'Seedance 2.0');
+assert.match(config.tribeStatus, /Percept/);
+const runs = await (await fetch(base + '/api/runs')).json();
+assert.ok(Array.isArray(runs));
+const blocked = await fetch(base + '/api/media', { method: 'POST', headers: { origin: 'https://example.org', 'content-type': 'video/mp4' } });
 assert.equal(blocked.status, 403);
-const invalid = await fetch(base + '/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ product: 'Invalid', description: 'Test', goal: 'Test', population: 999 }) });
-assert.equal(invalid.status, 400);
-const brief = {
-  product: 'PULSE', description: 'A botanical sparkling water with bright citrus and no added sugar. Made for the everyday reset.',
-  audience: 'Creative professionals looking for an afternoon reset', goal: 'Make an everyday break feel refreshing and desirable. Inspire people to try PULSE.',
-  weights: { joy: 30, trust: 20, curiosity: 35, desire: 15 }, rounds: 3, population: 8, shortlist: 3, seed: 42, mode: 'demo', scorer: 'proxy',
-};
-const created = await fetch(base + '/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(brief) });
-assert.equal(created.status, 202);
-let run = await created.json();
-const deadline = Date.now() + 10000;
-while (run.status === 'running' && Date.now() < deadline) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  run = await (await fetch(`${base}/api/runs/${run.id}`)).json();
-}
-assert.equal(run.status, 'completed');
-assert.equal(run.rounds.length, 3);
-assert.equal(run.metrics.generated, 24);
-assert.equal(run.finalists.length, 3);
-assert.equal(run.metrics.tribeCalls, 0);
-for (const finalist of run.finalists) {
-  assert.equal(finalist.scores.source, 'heuristic');
-  assert.equal((await fetch(base + finalist.asset.url)).status, 200);
-}
-const exported = await fetch(`${base}/api/runs/${run.id}/export`);
-assert.match(exported.headers.get('content-disposition'), /attachment/);
-assert.deepEqual(await exported.json(), run);
-assert.deepEqual(JSON.parse(await readFile(new URL(`../data/runs/${run.id}.json`, import.meta.url))), run);
-console.log(JSON.stringify({ url: `${base}/#run=${run.id}`, status: run.status, finalists: run.finalists.length, metrics: run.metrics, checks: 'assets, origin, input, complete demo, export, disk persistence' }, null, 2));
+console.log(JSON.stringify({ url: base, checks: 'static assets, Percept/Seedance configuration, saved-run listing, origin protection; no generation or inference' }));

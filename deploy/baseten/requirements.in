@@ -8,3 +8,5 @@ transformers==4.56.2
 huggingface-hub==0.35.3
 pandas==2.2.3
 scipy==1.15.3
+# TRIBE's get_events_dataframe invokes uvx whisperx for audio/text events.
+uv==0.9.30
