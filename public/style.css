@@ -24,6 +24,7 @@ h1{font-family:'Manrope',sans-serif;font-size:28px;letter-spacing:-1.3px;font-we
 .lab-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
 .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
 .brief-panel{padding:16px}
+.panel-heading{margin-bottom:16px}
 h2{font-family:'Manrope',sans-serif;font-size:15px;letter-spacing:-.3px;margin:0;font-weight:700}
 .field{margin-bottom:10px}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field-row .field{margin-bottom:10px}.field label,.label-line>label{font-size:10px;font-weight:550;color:#999;display:block;margin-bottom:4px}.field input,.field textarea,.field select{display:block;width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;color:#ccc;background:#222;font-size:11px;line-height:1.7;transition:border .15s}.field textarea{resize:vertical;min-height:48px}.field input:hover,.field textarea:hover{border-color:#444}.field select option{background:#222}
 .field input::placeholder,.field textarea::placeholder{color:#555;opacity:1}
