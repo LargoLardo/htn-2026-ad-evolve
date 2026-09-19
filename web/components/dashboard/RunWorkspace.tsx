@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Download } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
@@ -25,8 +26,19 @@ const STAGE_TEXT: Record<RunStage, string> = {
   failed: 'Run failed.',
 };
 
-const TABS = ['candidates', 'lineage', 'research', 'log'] as const;
+const TABS = ['candidates', 'lineage', 'brain', 'research', 'log'] as const;
 type Tab = (typeof TABS)[number];
+
+// WebGL and the mesh binaries are only worth loading if this tab is opened, and
+// the canvas cannot be server-rendered.
+const BrainView = dynamic(() => import('@/components/brain/BrainView'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-lg border border-dashed border-border px-5 py-10 text-center text-sm text-foreground-lighter">
+      Loading the cortical surface…
+    </div>
+  ),
+});
 
 const score = (value?: number | null) =>
   typeof value === 'number' && Number.isFinite(value) ? value.toFixed(1) : '-';
@@ -215,6 +227,8 @@ export default function RunWorkspace({
           ))}
         </div>
       )}
+
+      {tab === 'brain' && <BrainView run={run} />}
 
       {tab === 'research' && (
         <div className="flex flex-col gap-4">
