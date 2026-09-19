@@ -1,0 +1,10 @@
+# Regenerate requirements.txt with uv pip compile for Python 3.11 / Linux.
+tribev2 @ git+https://github.com/facebookresearch/tribev2.git@af58661791a351a448a489042a28f6c37e1c14b7
+torch==2.6.0
+torchvision==0.21.0
+numpy==2.2.6
+Pillow==11.3.0
+transformers==4.56.2
+huggingface-hub==0.35.3
+pandas==2.2.3
+scipy==1.15.3

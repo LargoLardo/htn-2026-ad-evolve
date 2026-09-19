@@ -38,13 +38,13 @@
             <div class="field"><label for="goal">What should the ad achieve?</label><textarea id="goal" name="goal" rows="2" maxlength="800" required>Make an everyday break feel refreshing and desirable. Inspire people to try PULSE.</textarea></div>
             <div class="form-divider"></div>
             <div class="label-line"><label>How should it feel?</label><span>Relative priorities</span></div>
-            <p class="field-hint">Shape the response you want to explore.</p>
+            <p class="field-hint">Guide the creative tone. These are not measured emotional responses.</p>
             <div id="emotion-controls"></div>
             <div class="form-divider"></div>
             <div class="label-line"><label for="rounds">Evolution settings</label><span class="tiny-badge">FAST SEARCH</span></div>
             <div class="number-grid"><div class="field"><label for="rounds">Rounds</label><input id="rounds" name="rounds" type="number" min="1" max="6" value="3" required></div><div class="field"><label for="population">Concepts / round</label><input id="population" name="population" type="number" min="4" max="16" value="8" required></div><div class="field"><label for="shortlist">Shortlist / round</label><input id="shortlist" name="shortlist" type="number" min="1" max="8" value="3" required></div></div>
             <div class="budget-note"><span data-icon="bolt"></span><span id="budget-note">Screen 24 concepts; render up to 9 shortlisted drafts.</span></div>
-            <details class="advanced"><summary>Models & reproducibility <span>+</span></summary><div class="field"><label for="mode">Generation</label><select id="mode" name="mode"><option value="demo">Demo · local illustrations</option value="live" disabled>Live · connect an API key</option></select></div><div class="field"><label for="scorer">Scoring</label><select id="scorer" name="scorer"><option value="proxy">Design heuristic · unvalidated</option value="tribe" disabled>TRIBE · connect a calibrated worker</option></select></div><div class="field"><label for="seed">Random seed</label><input id="seed" name="seed" type="number" min="0" max="2147483647" value="42" required></div><p class="field-hint">A fixed seed makes the demo repeatable. Live model outputs can vary.</p></details>
+            <details class="advanced"><summary>Models & reproducibility <span>+</span></summary><div class="field"><label for="mode">Generation</label><select id="mode" name="mode"><option value="demo">Demo · local illustrations</option value="live" disabled>Live · connect an API key</option></select></div><div class="field"><label for="scorer">Scoring</label><select id="scorer" name="scorer"><option value="proxy">Design heuristic · unvalidated</option value="tribe" disabled>TRIBE patterns · connect feature endpoint</option></select></div><div class="field" id="neural-target-field" hidden><label for="neuralTarget">Experimental pattern tie-break</label><select id="neuralTarget" name="neuralTarget"><option value="dorsal_attention">Dorsal attention network</option><option value="visual">Visual network</option><option value="ventral_attention">Salience / ventral attention network</option><option value="control">Control network</option><option value="default">Default network</option><option value="limbic">Limbic network</option><option value="somatomotor">Somatomotor network</option></select><p class="field-hint">Pattern similarity, not a measurement of attention or emotion.</p></div><div class="field"><label for="seed">Random seed</label><input id="seed" name="seed" type="number" min="0" max="2147483647" value="42" required></div><p class="field-hint">A fixed seed makes the demo repeatable. Live model outputs can vary.</p></details>
             <div id="form-error" role="alert" hidden></div>
             <button class="button primary run-button" id="start-run" type="submit"><span data-icon="sparkles"></span><span>Start evolution</span><span>↗</span></button>
             <p class="form-footnote" id="mode-note">No API key needed. Demo research and scores are illustrative.</p>
@@ -74,7 +74,7 @@
           <div class="principle-note"><span data-icon="fingerprint"></span><div><strong>Every creative has a genome.</strong><p>Hooks, visuals, emotional angles, proof, calls to action and palettes — all traceable across generations.</p></div><span class="note-arrow">↗</span></div>
         </div>
       </div>
-      <footer>EVOLVE / CREATIVE LAB <span>Built for exploration. Validated with people.</span><span>RESEARCH PROTOTYPE · 2026</span></footer>
+      <footer>EVOLVE / CREATIVE LAB <span>Built for exploration. Human validation still needed.</span><span>RESEARCH PROTOTYPE · 2026</span></footer>
     </div>
   </main>
   <dialog id="detail-dialog"><div class="dialog-top"><span class="section-kicker">CREATIVE INSPECTOR</span><button class="icon-button close-dialog" aria-label="Close creative inspector">✕</button></div><div id="detail-body"></div></dialog>

@@ -1,0 +1,21 @@
+model_name: evolve-tribe-affect
+python_version: py311
+requirements_file: requirements.txt
+external_package_dirs:
+  - ../../worker
+system_packages:
+  - ffmpeg
+  - git
+  - libsndfile1
+  - libgl1
+resources:
+  instance_type: H100
+runtime:
+  predict_concurrency: 1
+secrets:
+  hf_access_token: null
+environment_variables:
+  HF_HOME: /tmp/evolve-huggingface
+  HF_XET_CACHE: /tmp/evolve-huggingface/xet
+  TRIBE_CACHE_DIR: /tmp/evolve-tribe
+  TOKENIZERS_PARALLELISM: "false"

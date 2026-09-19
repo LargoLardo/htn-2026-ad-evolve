@@ -67,4 +67,7 @@ def fit(manifest_path, output, version):
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         raise SystemExit(__doc__)
+    import os
+    if os.environ.get("EVOLVE_ENABLE_EXPERIMENTAL_TRAINING") != "1":
+        raise SystemExit("Decoder training is paused; archived experiment only. Explicit per-command EVOLVE_ENABLE_EXPERIMENTAL_TRAINING=1 is required to resume.")
     fit(*sys.argv[1:])
