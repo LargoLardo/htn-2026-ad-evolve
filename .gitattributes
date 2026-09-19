@@ -1,0 +1,9 @@
+# Checksummed assets must reach disk byte-for-byte. With core.autocrlf=true a
+# Windows checkout rewrites their newlines, and the recorded SHA-256 then fails.
+worker/assets/glasser-fsaverage5.json -text
+worker/assets/glasser-fsaverage5.sha256 -text
+
+# Raw little-endian mesh buffers read by the web brain view.
+*.f32 -text -diff
+*.u8 -text -diff
+*.u32 -text -diff
