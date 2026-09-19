@@ -26,6 +26,19 @@ const intensity = (value: number) => Math.max(0, Math.min(1, (value - PARITY) / 
 const familyColor = (key: string, fallback?: string) =>
   fallback ?? FAMILIES.find((family) => family.key === key)?.color ?? '#9b8cff';
 
+/** Written by experimental/export_brain_mesh.py from the worker's own family patterns. */
+interface MeshManifest {
+  families: {
+    index: number;
+    key: string;
+    name: string;
+    short: string;
+    reliability: string;
+    vertexCount: number;
+    parcels: string[];
+  }[];
+}
+
 const trace = (neural: NeuralScore, key: string) =>
   neural.regions?.find((region) => region.key === key)?.values ?? [];
 
@@ -116,11 +129,36 @@ export default function BrainView({ run }: { run: Run }) {
   const select = useCallback((id: string) => setSelectedId(id), []);
   const illustrative = regions.length === 0;
 
+  // 0 means nothing is picked; 1-4 index the families in FAMILIES order.
+  const [family, setFamily] = useState(0);
+  const [manifest, setManifest] = useState<MeshManifest | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/brain/manifest.json')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: MeshManifest | null) => {
+        if (!cancelled) setManifest(data);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const detail = family > 0 ? manifest?.families.find((item) => item.index === family) : undefined;
+  const detailRegion = family > 0 ? regions[family - 1] : undefined;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
         <div className="relative h-[520px] overflow-hidden rounded-lg border border-border bg-black">
-          <BrainCanvas levels={levels} colors={colors} activityLevel={1} />
+          <BrainCanvas
+            levels={levels}
+            colors={colors}
+            activityLevel={1}
+            selected={family}
+            onSelect={setFamily}
+          />
 
           <div className="pointer-events-none absolute left-5 top-5 flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-[0.16em] text-white/40">
@@ -174,31 +212,42 @@ export default function BrainView({ run }: { run: Run }) {
         <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface-100 p-5">
           <h3 className="label">Response systems</h3>
           {regions.length ? (
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-1">
               {regions.map((region, index) => (
-                <li key={region.key} className="flex flex-col gap-1.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="flex items-center gap-2 text-xs text-foreground-light">
+                <li key={region.key}>
+                  <button
+                    type="button"
+                    onClick={() => setFamily(family === index + 1 ? 0 : index + 1)}
+                    aria-pressed={family === index + 1}
+                    className={cn(
+                      'focus-ring flex w-full flex-col gap-1.5 rounded-md px-2 py-2 text-left transition-colors',
+                      family === index + 1 ? 'bg-surface-200' : 'hover:bg-surface-200/60',
+                      family !== 0 && family !== index + 1 && 'opacity-45'
+                    )}
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="flex items-center gap-2 text-xs text-foreground-light">
+                        <i
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ background: region.color }}
+                        />
+                        {region.name}
+                      </span>
+                      <span className="text-xs tabular-nums text-foreground">
+                        {(region.values[frame] ?? region.score).toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-border-muted">
                       <i
-                        aria-hidden
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ background: region.color }}
+                        className="block h-full rounded-full"
+                        style={{
+                          width: `${Math.max(2, levels[index] * 100)}%`,
+                          background: region.color,
+                        }}
                       />
-                      {region.name}
-                    </span>
-                    <span className="text-xs tabular-nums text-foreground">
-                      {(region.values[frame] ?? region.score).toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="h-1 w-full overflow-hidden rounded-full bg-border-muted">
-                    <i
-                      className="block h-full rounded-full"
-                      style={{
-                        width: `${Math.max(2, levels[index] * 100)}%`,
-                        background: region.color,
-                      }}
-                    />
-                  </div>
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -207,6 +256,47 @@ export default function BrainView({ run }: { run: Run }) {
               Family traces appear once a run is scored with the Percept worker.
             </p>
           )}
+          {detail ? (
+            <div className="mt-2 flex flex-col gap-2 rounded-md border border-border bg-surface-200 p-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <h4 className="text-sm text-foreground">{detail.name}</h4>
+                <button
+                  type="button"
+                  onClick={() => setFamily(0)}
+                  className="focus-ring text-[11px] text-foreground-lighter hover:text-foreground"
+                >
+                  Clear
+                </button>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                <dt className="text-foreground-muted">Reliability</dt>
+                <dd className="text-foreground-light">{detail.reliability}</dd>
+                <dt className="text-foreground-muted">Glasser parcels</dt>
+                <dd className="text-foreground-light">{detail.parcels.length}</dd>
+                <dt className="text-foreground-muted">Vertices</dt>
+                <dd className="text-foreground-light">{detail.vertexCount.toLocaleString()}</dd>
+                {detailRegion && (
+                  <>
+                    <dt className="text-foreground-muted">Mean</dt>
+                    <dd className="text-foreground-light tabular-nums">{detailRegion.score.toFixed(1)}</dd>
+                    <dt className="text-foreground-muted">Peak</dt>
+                    <dd className="text-foreground-light tabular-nums">
+                      {Math.max(...detailRegion.values).toFixed(1)} at{' '}
+                      {detailRegion.values.indexOf(Math.max(...detailRegion.values)) + 1}s
+                    </dd>
+                  </>
+                )}
+              </dl>
+              <p className="text-[11px] leading-relaxed text-foreground-lighter">
+                {detail.parcels.join(', ')}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-foreground-lighter">
+              Click a lit region on the cortex, or a row above, to inspect its parcels.
+            </p>
+          )}
+
           <p className="mt-auto border-t border-border pt-3 text-[11px] text-foreground-lighter">
             {neural?.provenance ??
               'Predicted cortical response over Glasser parcels, not validated emotion or conversions.'}
@@ -251,7 +341,7 @@ export default function BrainView({ run }: { run: Run }) {
       )}
 
       {regions.length > 0 && frames > 1 && (
-        <FamilyTraces regions={regions} frame={frame} duration={duration} />
+        <FamilyTraces regions={regions} frame={frame} duration={duration} selected={family} />
       )}
     </div>
   );
@@ -263,10 +353,12 @@ function FamilyTraces({
   regions,
   frame,
   duration,
+  selected,
 }: {
   regions: { key: string; name: string; color: string; values: number[] }[];
   frame: number;
   duration: number;
+  selected: number;
 }) {
   const plotWidth = CHART.width - CHART.left - CHART.right;
   const plotHeight = CHART.height - CHART.top - CHART.bottom;
@@ -310,13 +402,14 @@ function FamilyTraces({
           vectorEffect="non-scaling-stroke"
           className="text-foreground-muted"
         />
-        {regions.map((region) => {
+        {regions.map((region, index) => {
           const path = region.values
-            .map((value, index) => `${index === 0 ? 'M' : 'L'}${xFor(index).toFixed(1)} ${yFor(value).toFixed(1)}`)
+            .map((value, point) => `${point === 0 ? 'M' : 'L'}${xFor(point).toFixed(1)} ${yFor(value).toFixed(1)}`)
             .join(' ');
           const last = region.values.at(-1) ?? PARITY;
+          const faded = selected !== 0 && selected !== index + 1;
           return (
-            <g key={region.key}>
+            <g key={region.key} opacity={faded ? 0.25 : 1}>
               <path
                 d={path}
                 fill="none"
@@ -339,8 +432,14 @@ function FamilyTraces({
       </svg>
 
       <ul className="flex flex-wrap gap-x-4 gap-y-1">
-        {regions.map((region) => (
-          <li key={region.key} className="flex items-center gap-1.5 text-[11px] text-foreground-lighter">
+        {regions.map((region, index) => (
+          <li
+            key={region.key}
+            className={cn(
+              'flex items-center gap-1.5 text-[11px] text-foreground-lighter',
+              selected !== 0 && selected !== index + 1 && 'opacity-45'
+            )}
+          >
             <i aria-hidden className="size-2 rounded-full" style={{ background: region.color }} />
             {region.name}
           </li>
