@@ -1,0 +1,15 @@
+{
+  "name": "evolve-ads",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An evolutionary creative lab with optional research, image generation and calibrated TRIBE scoring.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "dev": "node --env-file-if-exists=.env --watch server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "check": "node --check server.mjs && node --check lib/evolution.mjs && node --check lib/providers.mjs && node --check public/app.js"
+  }
+}
