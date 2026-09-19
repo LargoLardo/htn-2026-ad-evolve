@@ -101,7 +101,14 @@ def main():
     if not 2 <= args.grid <= 8:
         raise SystemExit("--grid must be between 2 and 8")
 
-    device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
+    # CPU rather than MPS on Apple silicon, deliberately.
+    #
+    # DeepGaze IIE carries float64 buffers, and MPS cannot hold float64, so
+    # .to("mps") raises before inference starts. Casting them to float32 would
+    # silently reduce the precision of the finalizer that normalises the log
+    # density, so the honest fallback is CPU. One 1024px image takes seconds,
+    # and this runs once per ad rather than once per occluded cell.
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     image = load_image(args.image)
     density = saliency(image, device)
     if args.heatmap:
