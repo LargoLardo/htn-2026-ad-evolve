@@ -244,3 +244,16 @@ test('a changed reference is rejected before research or mixing scores', async (
   assert.equal(mixed.status, 'failed');
   assert.match(mixed.error, /scoring contract changed/);
 });
+
+test('single-gene mutation from main is preserved alongside the eight-gene pipeline', async () => {
+  const genome = { hook: 'same hook', visual: 'same scene', emotion: 'joy', proof: 'same proof', cta: 'same action', palette: 'same palette', motion: 'same motion', audio: 'same audio' };
+  const result = await evolveRun(createRun(validateBrief({ ...input, rounds: 2 })), {
+    ...providers,
+    generateConcepts: async (brief, findings, options) => options.parents.length ? options.parents : Array.from({ length: options.count }, (_, i) => ({ genome: { ...genome }, headline: `Route ${i}`, body: brief.description, cta: 'Discover' })),
+  });
+  assert.equal(result.status, 'completed', result.error);
+  for (const child of result.rounds[1].candidates.filter(c => c.mutation !== 'Elite retained')) {
+    assert.equal(Object.keys(genome).filter(key => child.genome[key] !== genome[key]).length, 1);
+    assert.equal(Object.keys(child.genome).length, 8);
+  }
+});

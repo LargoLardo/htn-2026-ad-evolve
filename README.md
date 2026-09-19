@@ -1,18 +1,25 @@
-# Evolve — image and video ad evolution
+# Advolve — image and video ad evolution
 
 Generate ad takes, review the actual media, then evolve the strongest takes using Percept's published TRIBE scoring method. Images use OpenAI image generation; videos use **Seedance 2.0 through Pika**. Research, concept writing and media review use OpenAI.
 
 ## Run locally
 
-Requires Node 22+ and FFmpeg. No npm dependencies are needed.
+Requires Node 22+ and FFmpeg. The Node API has no npm dependencies; the Next.js interface has its own locked dependencies in `web/`.
 
 ```sh
 cp .env.example .env
 # Set credentials and the updated TRIBE worker endpoint in .env.
-npm start
+npm start  # API on 127.0.0.1:3000
 ```
 
-Open http://127.0.0.1:3000. The server binds to loopback only. It stores media, runs and caches under ignored `data/` directories.
+In another terminal:
+
+```sh
+npm ci --prefix web
+npm run dev --prefix web  # interface on 127.0.0.1:3001
+```
+
+Open http://127.0.0.1:3001. The Next.js interface proxies API requests and media to the backend. Set `EVOLVE_API_ORIGIN` for the Next.js process if the backend uses another address. For a production build, run `npm run build --prefix web`, then `npm start --prefix web`. The server binds to loopback only. It stores media, runs and caches under ignored `data/` directories.
 
 Set `OPENAI_API_KEY` for research, images and review, `PIKA_API_KEY` for video generation, and `BASETEN_TRIBE_ENDPOINT` / `BASETEN_API_KEY` for neural scoring. Alternatively, `TRIBE_SCORE_URL` / `TRIBE_TOKEN` can address a worker implementing the same JSON contract. `FFMPEG_BIN` can override the FFmpeg executable. Configuration indicators only check settings; they do not wake a GPU or validate credentials.
 
@@ -25,7 +32,7 @@ Set `OPENAI_API_KEY` for research, images and review, `PIKA_API_KEY` for video g
 3. Generate the population. Seedance videos use 720p, 4–15 seconds (default 10), and portrait, landscape or square format. Image takes are 1024×1024. The genome includes hook, visual, emotion, proof, CTA, palette, motion and audio.
 4. Review actual pixels, copy, product visibility, supported claims and brief alignment. Video review samples six frames and transcribes audio with Whisper; it does **not** assess every frame or motion smoothness. All checks must pass and quality/alignment must each reach 60. The shortlist uses review scores and observed visual diversity.
 5. Evaluate at most K shortlisted takes per generation with TRIBE. An uploaded original receives one additional baseline evaluation. Without an upload, the first shortlisted take becomes the original. That original stays fixed throughout the run.
-6. Rank evaluated, reviewed takes by Percept's overall neural score. Review quality breaks exact neural ties. Retain the winner and use crossover/mutation to produce the next generation. Emotion sliders guide concepts; they do not change neural score weights.
+6. Rank evaluated, reviewed takes by Percept's overall neural score. Review quality breaks exact neural ties. Retain the winner and use crossover and exactly one gene mutation per child to produce the next generation. Emotion sliders guide concepts; they do not change neural score weights.
 
 If every review fails, retain a **nonempty provisional shortlist**. Failed checks remain visible and failed; provisional drafts compete only while no reviewed neural candidates are available. They are marked as needing review, including in the final results. A shortlist of one may produce fewer than three distinct finalists.
 
@@ -52,9 +59,10 @@ Seedance follows [Pika's model-specific REST specification](https://mcp.pika.art
 
 ```sh
 npm run check
+npm run build --prefix web
 npm test
 .venv/bin/python -m unittest worker.test_percept training.test_training training.test_pause
 npm run smoke  # existing local server; no generation or GPU calls
 ```
 
-Node tests require FFmpeg. Python tests need NumPy and Pillow plus the existing training test dependencies. `scripts/check-ui.py` optionally checks HTML/CSS using BeautifulSoup and tinycss2. Tests cover score parity, shared baselines, uploads, streaming ranges, video review, Pika job reuse/cancellation, cache corruption, evolution, and nonempty shortlist fallback. Paid generation and GPU inference need a separately configured live check; offline parity does not establish identical model predictions across runtimes or human-response validity.
+Node tests require FFmpeg. Python tests need NumPy and Pillow plus the existing training test dependencies. Tests cover score parity, shared baselines, uploads, streaming ranges, video review, Pika job reuse/cancellation, cache corruption, evolution, and nonempty shortlist fallback. Paid generation and GPU inference need a separately configured live check; offline parity does not establish identical model predictions across runtimes or human-response validity.

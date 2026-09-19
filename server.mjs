@@ -126,9 +126,13 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
       }
       if (pathname.startsWith('/api/')) return json(response, 404, { error: 'API route not found.' });
       if (!['GET', 'HEAD'].includes(request.method)) return json(response, 405, { error: 'Method not allowed.' });
+      // This process is the API and the generated-asset store. The interface is
+      // the Next.js app in web/, which proxies /api and /assets through to here,
+      // so there is no static site to serve any more.
       const asset = pathname.startsWith('/assets/');
-      const base = asset ? assetsDir() : path.join(ROOT, 'public');
-      const requested = asset ? pathname.slice('/assets/'.length) : pathname === '/' ? 'index.html' : pathname.slice(1);
+      if (!asset) return json(response, 404, { error: 'Not found. The interface is served by the web/ Next.js app.' });
+      const base = assetsDir();
+      const requested = pathname.slice('/assets/'.length);
       const target = path.resolve(base, requested);
       const relative = path.relative(base, target);
       if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return json(response, 404, { error: 'File not found.' });
