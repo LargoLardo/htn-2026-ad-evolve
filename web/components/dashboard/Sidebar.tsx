@@ -3,17 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { FlaskConical, Layers, Network, SlidersHorizontal } from 'lucide-react';
+import { Layers, Network, SlidersHorizontal } from 'lucide-react';
 import { BrandMark } from '@/components/layout/BrandMark';
 import { Dialog } from '@/components/ui/dialog';
 import { getConfig, listRuns } from '@/lib/api';
 import type { Config, RunSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const NAV = [
-  { href: '/dashboard', label: 'Lab', icon: FlaskConical },
-  { href: '/dashboard/runs', label: 'Experiments', icon: Layers },
-];
+// Experiments is the only destination. "Lab" used to be a second entry for the
+// same noun, which made opening a saved run look like leaving the section.
+const NAV = [{ href: '/dashboard', label: 'Experiments', icon: Layers }];
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -39,38 +38,39 @@ export default function Sidebar() {
         <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4 max-lg:w-full max-lg:items-center max-lg:px-2">
           <p className="label px-3 pb-1 max-lg:hidden">Workspace</p>
 
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors max-lg:justify-center max-lg:px-2',
-                active
-                  ? 'bg-brand-200 text-brand'
-                  : 'text-foreground-light hover:bg-surface-200 hover:text-foreground'
-              )}
-            >
-              <Icon size={17} strokeWidth={1.75} />
-              <span className="max-lg:hidden">{label}</span>
-              {href === '/dashboard/runs' && runs.length > 0 && (
-                <span className="ml-auto text-xs text-foreground-lighter max-lg:hidden">
-                  {runs.length}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+          {NAV.map(({ href, label, icon: Icon }) => {
+            // Any run page is still inside Experiments, so keep it highlighted.
+            const active = pathname === href || pathname.startsWith('/dashboard/runs');
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors max-lg:justify-center max-lg:px-2',
+                  active
+                    ? 'bg-brand-200 text-brand'
+                    : 'text-foreground-light hover:bg-surface-200 hover:text-foreground'
+                )}
+              >
+                <Icon size={17} strokeWidth={1.75} />
+                <span className="max-lg:hidden">{label}</span>
+                {runs.length > 0 && (
+                  <span className="ml-auto text-xs text-foreground-lighter max-lg:hidden">
+                    {runs.length}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
 
-        <button
-          type="button"
-          onClick={() => setDialog('how')}
-          className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground-light transition-colors hover:bg-surface-200 hover:text-foreground max-lg:justify-center max-lg:px-2"
-        >
-          <Network size={17} strokeWidth={1.75} />
-          <span className="max-lg:hidden">How it works</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setDialog('how')}
+            className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground-light transition-colors hover:bg-surface-200 hover:text-foreground max-lg:justify-center max-lg:px-2"
+          >
+            <Network size={17} strokeWidth={1.75} />
+            <span className="max-lg:hidden">How it works</span>
+          </button>
 
           <div className="mt-auto flex w-full flex-col gap-1 border-t border-border pt-3">
             <button

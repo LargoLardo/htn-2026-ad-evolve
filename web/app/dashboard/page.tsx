@@ -1,7 +1,7 @@
-import Lab from '@/components/dashboard/Lab';
+import ExperimentsPage from '@/components/dashboard/ExperimentsPage';
 
-export const metadata = { title: 'Lab | Evolve' };
+export const metadata = { title: 'Experiments | Evolve' };
 
 export default function DashboardPage() {
-  return <Lab />;
+  return <ExperimentsPage />;
 }

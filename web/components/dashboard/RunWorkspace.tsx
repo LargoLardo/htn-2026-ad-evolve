@@ -40,12 +40,10 @@ export default function RunWorkspace({
   run,
   running,
   onCancel,
-  onNew,
 }: {
   run: Run;
   running: boolean;
   onCancel: () => void;
-  onNew: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('candidates');
   const [selectedRound, setSelectedRound] = useState<string>('latest');
@@ -69,11 +67,17 @@ export default function RunWorkspace({
   return (
     <div className="flex flex-col gap-4">
       <div className="overflow-hidden rounded-lg border border-border bg-surface-100">
-        <div className="flex flex-wrap items-start justify-between gap-4 p-5">
-          <div className="flex flex-col gap-1">
-            <span className="label">Experiment</span>
-            <h2 className="text-xl text-foreground">{run.brief.product}</h2>
-            <p role="status" aria-live="polite" className="text-sm text-foreground-lighter">
+        {/* The product name and the Duplicate action belong to the page header
+            above this, so the banner carries only live state and run actions. */}
+        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            {running && (
+              <span
+                aria-hidden
+                className="size-2 shrink-0 animate-pulse rounded-full bg-brand"
+              />
+            )}
+            <p role="status" aria-live="polite" className="text-sm text-foreground-light">
               {run.error ?? STAGE_TEXT[run.stage] ?? run.stage}
             </p>
           </div>
@@ -83,11 +87,6 @@ export default function RunWorkspace({
                 Stop run
               </Button>
             ) : (
-              <Button type="button" size="small" onClick={onNew}>
-                New experiment
-              </Button>
-            )}
-            {!running && (
               <ButtonLink href={exportHref(run.id)} size="small" download prefetch={false}>
                 <Download size={14} /> Export run
               </ButtonLink>
@@ -167,7 +166,7 @@ export default function RunWorkspace({
           {shown.length === 0 ? (
             <Waiting running={running} text="No candidates in this generation yet." />
           ) : (
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
               {shown.map((candidate, index) => (
                 <CreativeCard
                   key={candidate.id}
@@ -363,17 +362,19 @@ function FitnessChart({ run }: { run: Run }) {
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface-100 p-5">
       <h3 className="label">Fitness by generation</h3>
-      <div className="flex items-end gap-4">
+      {/* Capped rather than flex-1: at full dashboard width, one bar per
+          generation stretched into wide slabs that read as blocks, not a chart. */}
+      <div className="flex items-end gap-6">
         {rounds.map((round) => (
-          <div key={round.number} className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex h-32 w-full items-end justify-center gap-1">
+          <div key={round.number} className="flex w-16 flex-col items-center gap-2">
+            <div className="flex h-32 w-full items-end justify-center gap-1.5">
               <div
-                className="w-1/3 rounded-t bg-brand transition-[height] duration-500"
+                className="w-5 rounded-t bg-brand transition-[height] duration-500"
                 style={{ height: `${clamp(round.best)}%` }}
                 title={`Best ${score(round.best)}`}
               />
               <div
-                className="w-1/3 rounded-t bg-border-stronger transition-[height] duration-500"
+                className="w-5 rounded-t bg-border-stronger transition-[height] duration-500"
                 style={{ height: `${clamp(round.mean)}%` }}
                 title={`Mean ${score(round.mean)}`}
               />

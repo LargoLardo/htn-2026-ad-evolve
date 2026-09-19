@@ -1,7 +1,6 @@
-import RunsList from '@/components/dashboard/RunsList';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Experiments | Evolve' };
-
-export default function RunsPage() {
-  return <RunsList />;
+/** The experiments list is now /dashboard itself. Keep the old path working. */
+export default function RunsIndex() {
+  redirect('/dashboard');
 }

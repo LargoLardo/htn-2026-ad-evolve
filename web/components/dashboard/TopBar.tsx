@@ -16,13 +16,11 @@ export default function TopBar() {
   const pathname = usePathname();
 
   const crumbs: { label: string; href?: string }[] = [{ label: 'Evolve', href: '/dashboard' }];
-  if (pathname === '/dashboard') {
-    crumbs.push({ label: 'Lab' });
-  } else if (pathname === '/dashboard/runs') {
-    crumbs.push({ label: 'Experiments' });
-  } else if (pathname.startsWith('/dashboard/runs/')) {
-    crumbs.push({ label: 'Experiments', href: '/dashboard/runs' });
+  if (pathname.startsWith('/dashboard/runs/')) {
+    crumbs.push({ label: 'Experiments', href: '/dashboard' });
     crumbs.push({ label: pathname.split('/').pop()?.slice(0, 8) ?? 'Run' });
+  } else {
+    crumbs.push({ label: 'Experiments' });
   }
 
   return (
