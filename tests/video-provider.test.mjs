@@ -12,7 +12,7 @@ test('Seedance request, authenticated download redirect and completed-job reuse'
     if (url.endsWith('/text-to-video')) {
       assert.equal(options.headers['X-API-Key'], 'test-pika-secret');
       assert.match(options.headers['Idempotency-Key'], /^[a-f0-9]{64}$/);
-      assert.deepEqual(JSON.parse(options.body), { prompt: 'Notebook reveal', resolution: '720p', aspect_ratio: '9:16', duration: 10 });
+      assert.deepEqual(JSON.parse(options.body), { prompt: 'Notebook reveal', resolution: '720p', ratio: '9:16', duration: 10 });
       return Response.json({ id: 'media_123', status: 'queued' });
     }
     if (url.endsWith('/jobs/media_123')) return Response.json({ status: 'completed' });

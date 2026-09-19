@@ -31,6 +31,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      aria-label={label}
       onClose={onClose}
       onCancel={onClose}
       // showModal() puts the backdrop behind the dialog box, so a click landing
