@@ -64,10 +64,12 @@ const fragmentShader = /* glsl */ `
       + mask.z * uFamilyColor[2] + mask.w * uFamilyColor[3]) / max(share, 0.0001);
     float level = dot(mask, uFamilyLevel * uFamilyFocus) * uActivityLevel;
 
-    // Wash rather than paint: the tint carries the surface shading, so gyri and
-    // sulci stay legible through a lit family instead of flattening into a decal.
-    vec3 wash = tint * (0.45 + 0.55 * lambert);
-    vec3 color = mix(shaded, wash, level * 0.62) + tint * level * 0.12;
+    // The tint carries the surface shading, so gyri and sulci stay legible through a
+    // lit family instead of flattening into a decal. A floor keeps an unlit family
+    // faintly visible, so every region can still be found and clicked.
+    vec3 wash = tint * (0.40 + 0.60 * lambert);
+    float paint = max(share * 0.16, level * 0.88);
+    vec3 color = mix(shaded, wash, paint) + tint * level * 0.22;
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -143,7 +145,7 @@ function Cortex({
     current.w += ((levels[3] ?? 0) - current.w) * step;
 
     const focus = material.current.uniforms.uFamilyFocus.value as THREE.Vector4;
-    const target = [1, 2, 3, 4].map((family) => (selected === 0 || selected === family ? 1 : 0.28));
+    const target = [1, 2, 3, 4].map((family) => (selected === 0 || selected === family ? 1 : 0.45));
     focus.x += (target[0] - focus.x) * step;
     focus.y += (target[1] - focus.y) * step;
     focus.z += (target[2] - focus.z) * step;
