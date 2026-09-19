@@ -100,7 +100,7 @@ export default function Home() {
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {STAGES.map((stage) => (
                 <Panel key={stage.n} innerClassName="flex h-full flex-col gap-2 p-5">
-                  <span className="font-mono text-xs text-brand">{stage.n}</span>
+                  <span className="text-xs font-medium tabular-nums text-brand">{stage.n}</span>
                   <h3 className="text-lg text-foreground">{stage.title}</h3>
                   <p className="text-sm text-foreground-lighter">{stage.body}</p>
                 </Panel>
@@ -131,7 +131,7 @@ export default function Home() {
                   <dl className="mt-auto flex flex-col gap-2 border-t border-border-muted pt-4">
                     {mode.rows.map(([key, value]) => (
                       <div key={key} className="flex flex-col gap-0.5">
-                        <dt className="font-mono text-[11px] uppercase tracking-wider text-foreground-muted">
+                        <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground-muted">
                           {key}
                         </dt>
                         <dd className="text-sm text-foreground-light">{value}</dd>

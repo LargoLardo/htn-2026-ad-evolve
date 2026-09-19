@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { dmSans, jetbrainsMono, manrope } from '@/lib/fonts';
+import { dmSans, manrope } from '@/lib/fonts';
 import { Providers } from '@/components/layout/Providers';
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${dmSans.variable} ${manrope.variable} ${jetbrainsMono.variable}`}
+      className={`${dmSans.variable} ${manrope.variable}`}
     >
       <body className="bg-background">
         <Providers>{children}</Providers>

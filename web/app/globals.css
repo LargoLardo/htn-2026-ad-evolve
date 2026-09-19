@@ -168,7 +168,10 @@
 @theme inline {
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-manrope, var(--font-dm-sans));
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  /* Deliberately not a monospace. Nothing here needs character-cell alignment,
+     and leaving this undefined makes Tailwind's default stack fall through to
+     Menlo on macOS. Anything still tagged font-mono gets DM Sans instead. */
+  --font-mono: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {
@@ -305,7 +308,7 @@
   }
 
   .label {
-    @apply text-xs font-mono uppercase text-foreground-lighter tracking-wider;
+    @apply text-[11px] font-medium uppercase text-foreground-lighter tracking-[0.12em];
   }
 }
 

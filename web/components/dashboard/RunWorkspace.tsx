@@ -200,7 +200,7 @@ export default function RunWorkspace({
                         : 'border-border bg-surface-100 text-foreground-lighter hover:text-foreground'
                     )}
                   >
-                    <span className="font-mono">{candidate.id}</span>
+                    <span className="tabular-nums">{candidate.id}</span>
                     <span className="ml-2 tabular-nums">{score(candidate.scores?.fitness)}</span>
                     {candidate.parents.length > 0 && (
                       <span className="ml-2 text-foreground-muted">
@@ -222,7 +222,7 @@ export default function RunWorkspace({
               <p className="text-sm text-foreground-light">{run.research.summary}</p>
               {run.research.insights.map((insight, index) => (
                 <article key={index} className="grid grid-cols-[28px_1fr] gap-3">
-                  <span className="font-mono text-xs text-foreground-muted">
+                  <span className="text-xs tabular-nums text-foreground-muted">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <div className="flex flex-col gap-1">
@@ -262,7 +262,7 @@ export default function RunWorkspace({
         <ul className="flex flex-col divide-y divide-border-muted border-y border-border-muted">
           {run.events.map((event, index) => (
             <li key={index} className="flex gap-3 py-1.5 text-xs">
-              <time className="shrink-0 font-mono text-foreground-muted">
+              <time className="shrink-0 tabular-nums text-foreground-muted">
                 {new Date(event.time).toLocaleTimeString()}
               </time>
               <span className="text-foreground-light">{event.message}</span>
@@ -334,7 +334,7 @@ function CreativeCard({
               Concept · not rendered
             </span>
           )}
-          <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] text-white">
+          <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white">
             {rank}
           </span>
         </div>
