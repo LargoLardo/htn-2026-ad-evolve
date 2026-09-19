@@ -27,7 +27,7 @@ const TABS = ['candidates', 'lineage', 'research', 'log'] as const;
 type Tab = (typeof TABS)[number];
 
 const score = (value?: number | null) =>
-  typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : '—';
+  typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : '-';
 
 const clamp = (value?: number | null) =>
   Math.min(100, Math.max(0, typeof value === 'number' && Number.isFinite(value) ? value : 0));

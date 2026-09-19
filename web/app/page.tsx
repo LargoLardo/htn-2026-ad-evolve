@@ -3,6 +3,7 @@ import Footer from '@/components/layout/Footer';
 import { SectionContainer } from '@/components/ui/section-container';
 import { Panel } from '@/components/ui/panel';
 import { ButtonLink } from '@/components/ui/button';
+import { FlickeringGrid } from '@/components/effects/FlickeringGrid';
 
 const STAGES = [
   { n: '01', title: 'Research once', body: 'Turn the product, audience and goal into evidence-linked creative hypotheses.' },
@@ -52,8 +53,18 @@ export default function Home() {
       <Nav />
       <main id="main" className="relative min-h-screen">
         {/* Supabase's hero is asymmetric rather than centred: headline in column
-            one, subcopy bottom-aligned against it in column two, and no background art. */}
-        <SectionContainer className="pt-12 pb-8 md:pt-32 md:pb-16">
+            one, subcopy bottom-aligned against it in column two. The flickering
+            grid sits behind it, masked so it fades out before it reaches the
+            text and never competes with the headline for attention. */}
+        <div className="relative isolate overflow-hidden">
+          <FlickeringGrid
+            className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_70%_60%_at_30%_40%,black_10%,transparent_70%)]"
+            squareSize={4}
+            gridGap={6}
+            flickerChance={0.25}
+            maxOpacity={0.22}
+          />
+          <SectionContainer className="pt-12 pb-8 md:pt-32 md:pb-16">
           <div className="flex flex-col gap-6 lg:gap-8">
             <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-2">
               <h1 className="text-4xl text-foreground sm:text-5xl sm:leading-none">
@@ -63,7 +74,7 @@ export default function Home() {
               <p className="text-balance text-foreground-lighter">
                 A population of creative concepts, each with an inspectable genome.
                 Screen them cheaply, render only the survivors, then recombine and
-                mutate across generations — with the full lineage visible the whole way.
+                mutate across generations, with the full lineage visible the whole way.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -75,7 +86,8 @@ export default function Home() {
               </ButtonLink>
             </div>
           </div>
-        </SectionContainer>
+          </SectionContainer>
+        </div>
 
         <section id="loop" className="border-t border-border">
           <SectionContainer>
@@ -134,7 +146,7 @@ export default function Home() {
               TRIBE v2 predicts cortical activity. It does not ship a validated
               joy/trust/curiosity/desire scorer, and this prototype does not pretend
               that demo scores come from it. Demo scores are an unvalidated design
-              heuristic — not measured emotion, and not a conversion forecast.
+              heuristic, not measured emotion and not a conversion forecast.
             </p>
           </SectionContainer>
         </section>

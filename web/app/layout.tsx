@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { dmSans, manrope } from '@/lib/fonts';
+import { dmSans, jetbrainsMono, manrope } from '@/lib/fonts';
 import { Providers } from '@/components/layout/Providers';
 
 export const metadata: Metadata = {
-  title: 'Evolve — Creative evolution lab',
+  title: 'Evolve | Creative evolution lab',
   description:
     'An evolutionary creative lab: product brief to diverse ad genomes, screening, rendering and selection over successive generations.',
 };
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${dmSans.variable} ${manrope.variable}`}
+      className={`${dmSans.variable} ${manrope.variable} ${jetbrainsMono.variable}`}
     >
       <body className="bg-background">
         <Providers>{children}</Providers>

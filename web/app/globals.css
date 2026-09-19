@@ -14,13 +14,14 @@
    foreground-default/light/lighter/muted, border-default/muted/strong/stronger)
    so that markup ported from apps/www resolves without renaming anything.
 
-   Brand is Evolve's lime #c7f078 = hsl(79 79% 71%). The ramp is deliberately
-   NOT symmetric between themes: measured against white, lime is 1.30:1, which
-   fails every contrast bar there is. So dark mode uses lime as the vivid fill
-   with near-black text on it (13.40:1), and light mode darkens the brand to
-   hsl(79 60% 30%) (4.92:1 as text on white, and with white text on it).
-   hsl(79 60% 32%) measures 4.37 and 34% measures 3.94 -- both fail AA, so 30%
-   is a ceiling, not a starting point.
+   Brand is a softened lime, hsl(79 62% 71%) in dark. The ramp is deliberately
+   NOT symmetric between themes: bright lime measures 1.30:1 on white, failing
+   every contrast bar there is. So dark mode keeps it as the vivid fill with
+   near-black text on it (12.4:1), and light mode drops it to hsl(79 48% 30%)
+   (5.3:1 as text on white, and with white text on it). Lightness is the
+   load-bearing part: at L32% it measures 4.37 and at L34% 3.94, both failing
+   AA, so L30% is a ceiling rather than a starting point. Saturation is free to
+   move, which is what the desaturation from 79% to 62% spends.
 --------------------------------------------------------------------------- */
 
 :root {
@@ -53,14 +54,14 @@
   color-scheme: dark;
 
   /* Lime stays vivid here; --foreground-contrast (near-black) is the text on it. */
-  --brand-default: 79deg 79% 71%;
-  --brand-link: 79deg 79% 78%;
-  --brand-600: 79deg 80% 80%;
-  --brand-500: 79deg 79% 71%;
+  --brand-default: 79deg 62% 71%;
+  --brand-link: 79deg 62% 78%;
+  --brand-600: 79deg 64% 80%;
+  --brand-500: 79deg 62% 71%;
   --brand-400: 79deg 50% 42%;
   --brand-300: 79deg 45% 24%;
   --brand-200: 79deg 40% 14%;
-  --brand-highlight: hsl(79deg 79% 78%);
+  --brand-highlight: hsl(79deg 62% 78%);
 
   --warning-default: 38.9deg 100% 42.9%;
   --warning-600: 38.9deg 100% 42.9%;
@@ -110,14 +111,14 @@
   color-scheme: light;
 
   /* Brand darkens hard here so it can carry white text and still read as lime. */
-  --brand-default: 79deg 60% 30%;
-  --brand-link: 79deg 62% 27%;
-  --brand-600: 79deg 65% 24%;
-  --brand-500: 79deg 60% 30%;
+  --brand-default: 79deg 48% 30%;
+  --brand-link: 79deg 50% 27%;
+  --brand-600: 79deg 52% 24%;
+  --brand-500: 79deg 48% 30%;
   --brand-400: 79deg 50% 55%;
   --brand-300: 79deg 65% 86%;
   --brand-200: 79deg 70% 94%;
-  --brand-highlight: hsl(79deg 55% 38%);
+  --brand-highlight: hsl(79deg 46% 38%);
 
   --warning-default: 30.3deg 80.3% 47.8%;
   --warning-600: 30.3deg 80.3% 47.8%;
@@ -167,6 +168,7 @@
 @theme inline {
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-manrope, var(--font-dm-sans));
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 @theme {
