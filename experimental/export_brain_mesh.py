@@ -22,6 +22,46 @@ ROOT = Path(__file__).resolve().parents[1]
 HEMISPHERE_VERTICES = 10242
 DIMENSION = 20484
 
+# Why each family's parcels sit where they do. Every DOI below was checked against
+# Crossref; the parcel lists themselves come from worker/percept_score.py, not from here.
+EVIDENCE = {
+    'auditory_engagement': {
+        'anatomy': 'Auditory core (A1), surrounding belt (MBelt, LBelt, PBelt) and parabelt '
+                   '(A4, A5) on the superior temporal plane, with adjacent STG and STS parcels.',
+        'sources': [
+            {'text': 'Moerel, De Martino & Formisano (2014), An anatomical and functional topography of human auditory cortical areas, Front. Neurosci.',
+             'doi': '10.3389/fnins.2014.00225'},
+        ],
+    },
+    'language_message': {
+        'anatomy': 'Inferior frontal gyrus areas 44 and 45 (Broca\'s region) with 47l and the '
+                   'inferior frontal sulcus/junction parcels.',
+        'sources': [
+            {'text': 'Friederici (2011), The brain basis of language processing: from structure to function, Physiol. Rev.',
+             'doi': '10.1152/physrev.00006.2011'},
+        ],
+    },
+    'attention_salience': {
+        'anatomy': 'Dorsal frontoparietal attention parcels (IPS, LIP, VIP, FEF, 6a) together with '
+                   'salience parcels in anterior insula (AVI, MI, FOP) and mid-cingulate (a24pr, p24pr), '
+                   'plus inferior parietal and temporoparietal junction areas.',
+        'sources': [
+            {'text': 'Corbetta & Shulman (2002), Control of goal-directed and stimulus-driven attention in the brain, Nat. Rev. Neurosci.',
+             'doi': '10.1038/nrn755'},
+            {'text': 'Seeley et al. (2007), Dissociable intrinsic connectivity networks for salience processing and executive control, J. Neurosci.',
+             'doi': '10.1523/JNEUROSCI.5587-06.2007'},
+        ],
+    },
+    'visual_motion': {
+        'anatomy': 'The human MT+ motion complex (MT, MST, V4t, FST) with the neighbouring lateral '
+                   'occipital parcels (LO1-LO3, V3CD) that Glasser groups with it.',
+        'sources': [
+            {'text': 'Tootell et al. (1995), Functional analysis of human MT and related visual cortical areas using MRI, J. Neurosci.',
+             'doi': '10.1523/JNEUROSCI.15-04-03215.1995'},
+        ],
+    },
+}
+
 
 def percept_module():
     spec = importlib.util.spec_from_file_location("percept_score", ROOT / "worker/percept_score.py")
@@ -89,7 +129,7 @@ def export(output_dir):
         "faceCount": len(faces),
         "families": [{"index": index, "key": key, "name": name, "short": short, "color": color,
                       "reliability": reliability, "vertexCount": int((families == index).sum()),
-                      "parcels": sorted(groups[index - 1])}
+                      "parcels": sorted(groups[index - 1]), **EVIDENCE[key]}
                      for index, (key, name, short, color, reliability, _patterns)
                      in enumerate(percept.FAMILIES, start=1)],
         "files": {name: {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
