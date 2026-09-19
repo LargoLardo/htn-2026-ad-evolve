@@ -59,6 +59,9 @@ export interface NeuralScore {
   engagementScore?: number;
   provenance: string;
   regions?: { key: string; name: string; score: number; color: string; values: number[] }[];
+  /** Length of each region trace, and the stimulus seconds it covers. */
+  frames?: number;
+  duration?: number;
 }
 
 export interface Scores {
