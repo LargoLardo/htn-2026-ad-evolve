@@ -30,8 +30,10 @@ export default function Sidebar() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col gap-1 border-r border-border bg-alternative px-3 py-5 max-lg:w-[64px] max-lg:items-center">
-        <div className="mb-8 px-1 max-lg:mb-6 max-lg:px-0">
-          <BrandMark className="max-lg:[&>span:last-child]:hidden" />
+        {/* The collapsed rail is 64px wide, which the wordmark cannot fit, so it
+            drops out entirely there rather than being clipped. */}
+        <div className="mb-8 px-1 max-lg:hidden">
+          <BrandMark />
         </div>
 
         {NAV.map(({ href, label, icon: Icon }) => {
