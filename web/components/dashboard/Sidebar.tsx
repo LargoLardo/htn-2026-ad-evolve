@@ -125,7 +125,8 @@ export default function Sidebar() {
                 {[
                   ['Research & concept generation', config.liveResearch],
                   ['Image generation', config.liveImages],
-                  ['Calibrated TRIBE worker', config.tribe],
+                  ['Visual render review', config.visualScreening],
+                  ['Experimental TRIBE patterns', config.tribe],
                 ].map(([label, on]) => (
                   <div key={label as string} className="flex items-center justify-between gap-4 py-2.5">
                     <dt>{label as string}</dt>
@@ -144,12 +145,22 @@ export default function Sidebar() {
                 <br />
                 Image model <code className="text-foreground">{config.imageModel}</code>
                 <br />
-                TRIBE <code className="text-foreground">{config.tribeStatus}</code>
+                Review model <code className="text-foreground">{config.screenModel}</code>
               </p>
               <p>
                 To enable live generation, copy <code>.env.example</code> to <code>.env</code>, set{' '}
-                <code>OPENAI_API_KEY</code> and restart the server. For TRIBE scoring, follow{' '}
-                <code>worker/WORKER.md</code>.
+                <code>OPENAI_API_KEY</code> and restart the API server.
+              </p>
+              <h3 className="text-lg text-foreground">Experimental TRIBE patterns</h3>
+              <p className="text-xs text-foreground-lighter">{config.tribeStatus}</p>
+              <p>
+                Needs an existing feature endpoint (<code>BASETEN_TRIBE_ENDPOINT</code> with{' '}
+                <code>BASETEN_API_KEY</code>, or a full <code>TRIBE_FEATURES_URL</code>) and a frozen
+                reference at <code>TRIBE_REFERENCE_PATH</code>. See <code>experimental/README.md</code>.
+              </p>
+              <p className="text-xs text-foreground-lighter">
+                Decoder training: {config.decoderTraining}. This app never starts model downloads,
+                extraction jobs or training.
               </p>
             </>
           ) : (

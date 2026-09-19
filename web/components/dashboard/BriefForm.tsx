@@ -293,7 +293,12 @@ export default function BriefForm({
             >
               <option value="proxy">Design heuristic · clearly labelled proxy</option>
               <option value="tribe" disabled={!tribeAvailable || mode !== 'live'}>
-                TRIBE · {tribeAvailable ? 'requires live mode' : 'worker not configured'}
+                TRIBE patterns ·{' '}
+                {!tribeAvailable
+                  ? 'needs a feature endpoint and reference'
+                  : mode !== 'live'
+                    ? 'requires live mode'
+                    : 'experimental'}
               </option>
             </select>
           </div>

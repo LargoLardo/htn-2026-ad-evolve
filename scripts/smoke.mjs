@@ -2,12 +2,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const base = 'http://127.0.0.1:3000';
-const assets = ['/', '/app.js', '/style.css', '/fonts/fonts.css', '/fonts/dm-sans-400-700.woff2', '/fonts/manrope-400-800.woff2'];
-for (const path of assets) {
-  const response = await fetch(base + path);
-  assert.equal(response.status, 200, path);
-  assert.ok((await response.arrayBuffer()).byteLength > 0, path);
-}
+// The interface is the Next.js app in web/; this process serves only the API
+// and the generated-asset store, so there is no static site to probe.
+const config = await fetch(base + '/api/config');
+assert.equal(config.status, 200, '/api/config');
+assert.ok((await config.json()).limits, '/api/config limits');
+const notStatic = await fetch(base + '/');
+assert.equal(notStatic.status, 404, 'root is no longer a static site');
 const blocked = await fetch(base + '/api/runs', { method: 'POST', headers: { origin: 'https://example.org', 'content-type': 'application/json' }, body: '{}' });
 assert.equal(blocked.status, 403);
 const invalid = await fetch(base + '/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ product: 'Invalid', description: 'Test', goal: 'Test', population: 999 }) });

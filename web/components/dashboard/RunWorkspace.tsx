@@ -105,7 +105,9 @@ export default function RunWorkspace({
           {[
             ['Generated', run.metrics.generated],
             ['Rendered', run.metrics.rendered],
-            ['Cache hits', run.metrics.cacheHits],
+            ...(run.metrics.reviewed > 0
+              ? ([['Reviewed', `${run.metrics.reviewed - run.metrics.rejected}/${run.metrics.reviewed}`]] as [string, string][])
+              : ([['Cache hits', run.metrics.cacheHits]] as [string, number][])),
             ['Elapsed', elapsed(run.metrics.elapsedMs)],
           ].map(([label, value]) => (
             <div key={label as string} className="flex flex-col gap-0.5 p-4">
@@ -118,7 +120,7 @@ export default function RunWorkspace({
 
       <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
         {run.brief.scorer === 'tribe'
-          ? 'TRIBE plus an experimental fitted decoder. Scores estimate ratings; predictive validity must be established separately.'
+          ? 'Experimental network-pattern percentiles against a frozen reference. Not a validated emotion readout, and not a conversion forecast.'
           : 'Design heuristic out of 100. These are illustrative design priors, not measured emotions or predicted conversions.'}
       </p>
 

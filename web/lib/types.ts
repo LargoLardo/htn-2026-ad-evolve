@@ -105,6 +105,12 @@ export interface Metrics {
   tribeCalls: number;
   tribeCandidates: number;
   rendered: number;
+  /** Candidates put through the multimodal render review. */
+  reviewed: number;
+  /** Of those, how many the reviewer rejected. */
+  rejected: number;
+  /** Rounds that shortlisted on provisional scores while inference caught up. */
+  provisionalRounds: number;
   elapsedMs: number;
 }
 
@@ -134,10 +140,16 @@ export interface RunSummary {
 export interface Config {
   liveResearch: boolean;
   liveImages: boolean;
+  /** Experimental TRIBE pattern scoring: needs a feature endpoint AND a frozen reference. */
   tribe: boolean;
+  /** Multimodal review of rendered images before they are scored. */
+  visualScreening: boolean;
   textModel: string;
   imageModel: string;
+  screenModel: string;
   tribeDecoder: string | null;
+  /** Decoder training is deliberately paused; surfaced so the UI cannot imply otherwise. */
+  decoderTraining: string;
   tribeStatus: string;
   limits: {
     rounds: number;
