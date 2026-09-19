@@ -60,8 +60,8 @@ function updateModes() {
   $('#scorer option[value="tribe"]').disabled = !canTribe;
   $('#scorer option[value="tribe"]').textContent = config.tribe ? 'TRIBE · calibrated worker (live images)' : 'TRIBE · connect a calibrated worker';
   if (!canTribe && $('#scorer').value === 'tribe') $('#scorer').value = 'proxy';
-  $('#mode-note').textContent = $('#mode').value === 'demo' ? 'No API key needed. Demo research and scores are illustrative.' : 'Live mode makes paid API calls using your server credentials.';
-  $('#mode-badge').innerHTML = `<i></i> ${$('#mode').value === 'demo' ? 'Demo workspace' : 'Live generation'}`;
+  $('#mode-note').textContent = $('#mode').value === 'demo' ? '' : '';
+  $('#mode-badge').innerHTML = `<i></i> ${$('#mode').value === 'demo' ? 'Demo' : 'Live'}`;
 }
 $('#mode').addEventListener('change',updateModes);
 
@@ -77,7 +77,7 @@ function fillBrief(brief) {
 }
 function lockForm(locked) {
   $$('#brief-form input, #brief-form textarea, #brief-form select, #start-run').forEach(node => node.disabled = locked);
-  $('#start-run').innerHTML = locked ? `${icon('sparkles')}<span>Evolution in progress</span><span>↗</span>` : `${icon('sparkles')}<span>Start evolution</span><span>↗</span>`;
+  $('#start-run').innerHTML = locked ? `<span>Evolution in progress</span>` : `<span>Start evolution</span>`;
   if (!locked) updateModes();
 }
 $('#brief-form').addEventListener('submit', async event => {
