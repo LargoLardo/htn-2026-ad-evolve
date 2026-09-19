@@ -1,0 +1,319 @@
+@import 'tailwindcss';
+
+@source "../app";
+@source "../components";
+
+/* next-themes is configured with attribute="data-theme", so Tailwind's `dark:`
+   variant has to bind to that attribute rather than the default `.dark` class. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   Vocabulary and grey ramps follow Supabase's system (surface-75..400,
+   foreground-default/light/lighter/muted, border-default/muted/strong/stronger)
+   so that markup ported from apps/www resolves without renaming anything.
+
+   Brand is Evolve's lime #c7f078 = hsl(79 79% 71%). The ramp is deliberately
+   NOT symmetric between themes: measured against white, lime is 1.30:1, which
+   fails every contrast bar there is. So dark mode uses lime as the vivid fill
+   with near-black text on it (13.40:1), and light mode darkens the brand to
+   hsl(79 60% 30%) (4.92:1 as text on white, and with white text on it).
+   hsl(79 60% 32%) measures 4.37 and 34% measures 3.94 -- both fail AA, so 30%
+   is a ceiling, not a starting point.
+--------------------------------------------------------------------------- */
+
+:root {
+  --nav-h: calc(4rem + 1px);
+
+  --colors-black: 0deg 0% 0%;
+  --colors-white: 0deg 0% 100%;
+
+  --colors-gray-dark-100: 0deg 0% 8.6%;
+  --colors-gray-dark-200: 0deg 0% 11%;
+  --colors-gray-dark-300: 0deg 0% 13.7%;
+  --colors-gray-dark-400: 0deg 0% 15.7%;
+  --colors-gray-dark-500: 0deg 0% 18%;
+  --colors-gray-dark-600: 0deg 0% 20.4%;
+  --colors-gray-dark-700: 0deg 0% 24.3%;
+  --colors-gray-dark-800: 0deg 0% 31.4%;
+  --colors-gray-dark-900: 0deg 0% 43.9%;
+  --colors-gray-dark-1100: 0deg 0% 62.7%;
+  --colors-gray-dark-1200: 0deg 0% 92.9%;
+
+  --colors-gray-light-300: 0deg 0% 95.3%;
+  --colors-gray-light-400: 0deg 0% 92.9%;
+  --colors-gray-light-500: 0deg 0% 91%;
+  --colors-gray-light-800: 0deg 0% 78%;
+  --colors-gray-light-900: 0deg 0% 56.1%;
+  --colors-gray-light-1200: 0deg 0% 9%;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Lime stays vivid here; --foreground-contrast (near-black) is the text on it. */
+  --brand-default: 79deg 79% 71%;
+  --brand-link: 79deg 79% 78%;
+  --brand-600: 79deg 80% 80%;
+  --brand-500: 79deg 79% 71%;
+  --brand-400: 79deg 50% 42%;
+  --brand-300: 79deg 45% 24%;
+  --brand-200: 79deg 40% 14%;
+  --brand-highlight: hsl(79deg 79% 78%);
+
+  --warning-default: 38.9deg 100% 42.9%;
+  --warning-600: 38.9deg 100% 42.9%;
+  --warning-500: 34.8deg 90.9% 21.6%;
+  --warning-400: 33.2deg 100% 14.5%;
+  --warning-300: 32.3deg 100% 10.2%;
+  --warning-200: 36.6deg 100% 8%;
+
+  --destructive-default: 10.2deg 77.9% 53.9%;
+  --destructive-600: 9.7deg 85.2% 62.9%;
+  --destructive-500: 7.9deg 71.6% 29%;
+  --destructive-400: 6.7deg 60% 20.6%;
+  --destructive-300: 7.5deg 51.3% 15.3%;
+  --destructive-200: 10.9deg 23.4% 9.2%;
+
+  --border-default: 0deg 0% 18%;
+  --border-muted: 0deg 0% 14.1%;
+  --border-strong: 0deg 0% 21.2%;
+  --border-stronger: 0deg 0% 27.1%;
+  --border-button-default: 0deg 0% 22.4%;
+  --border-button-hover: 0deg 0% 30%;
+  --border-overlay: 0deg 0% 20%;
+  --border-control: 0deg 0% 22.4%;
+
+  --background-default: 0deg 0% 9.8%;
+  --background-200: 0deg 0% 9%;
+  --background-surface-75: 0deg 0% 9%;
+  --background-surface-100: 0deg 0% 12.2%;
+  --background-surface-200: 0deg 0% 12.9%;
+  --background-surface-300: 0deg 0% 16.1%;
+  --background-surface-400: 0deg 0% 16.1%;
+  --background-muted: 0deg 0% 14.1%;
+  --background-selection: 0deg 0% 19.2%;
+  --background-alternative-default: 0deg 0% 5.9%;
+  --background-alternative-200: 0deg 0% 7.8%;
+  --background-control: 0deg 0% 14.1%;
+
+  --foreground-default: 0deg 0% 98%;
+  --foreground-light: 0deg 0% 70.6%;
+  --foreground-lighter: 0deg 0% 53.7%;
+  --foreground-muted: 0deg 0% 30.2%;
+  --foreground-contrast: 0deg 0% 8.6%;
+  --hi-contrast: 0deg 0% 100%;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Brand darkens hard here so it can carry white text and still read as lime. */
+  --brand-default: 79deg 60% 30%;
+  --brand-link: 79deg 62% 27%;
+  --brand-600: 79deg 65% 24%;
+  --brand-500: 79deg 60% 30%;
+  --brand-400: 79deg 50% 55%;
+  --brand-300: 79deg 65% 86%;
+  --brand-200: 79deg 70% 94%;
+  --brand-highlight: hsl(79deg 55% 38%);
+
+  --warning-default: 30.3deg 80.3% 47.8%;
+  --warning-600: 30.3deg 80.3% 47.8%;
+  --warning-500: 36.3deg 85.7% 67.1%;
+  --warning-400: 41.9deg 100% 81.8%;
+  --warning-300: 44.3deg 100% 91.8%;
+  --warning-200: 40deg 81.8% 97.8%;
+
+  --destructive-default: 10.2deg 77.9% 53.9%;
+  --destructive-600: 9.9deg 82% 43.5%;
+  --destructive-500: 10.4deg 77.1% 79.4%;
+  --destructive-400: 7.1deg 91.3% 91%;
+  --destructive-300: 7.1deg 100% 96.7%;
+  --destructive-200: 0deg 100% 99.4%;
+
+  --border-default: 0deg 0% 87.5%;
+  --border-muted: var(--colors-gray-light-400);
+  --border-strong: 0deg 0% 83.1%;
+  --border-stronger: 0deg 0% 56.1%;
+  --border-button-default: var(--colors-gray-light-800);
+  --border-button-hover: var(--colors-gray-light-900);
+  --border-overlay: var(--colors-gray-light-500);
+  --border-control: var(--colors-gray-light-800);
+
+  /* Page bg sits just below pure white so surface-100 cards visibly lift. */
+  --background-default: 0deg 0% 98.5%;
+  --background-200: var(--colors-gray-light-300);
+  --background-surface-75: 0deg 0% 100%;
+  --background-surface-100: 0deg 0% 100%;
+  --background-surface-200: 0deg 0% 95.3%;
+  --background-surface-300: 0deg 0% 92.9%;
+  --background-surface-400: 0deg 0% 89.8%;
+  --background-muted: 0deg 0% 96.9%;
+  --background-selection: var(--colors-gray-light-400);
+  --background-alternative-default: 0deg 0% 99.2%;
+  --background-alternative-200: 0deg 0% 96.5%;
+  --background-control: var(--colors-gray-light-300);
+
+  --foreground-default: var(--colors-gray-light-1200);
+  --foreground-light: 0deg 0% 32.2%;
+  --foreground-lighter: 0deg 0% 43.9%;
+  --foreground-muted: 0deg 0% 69.8%;
+  --foreground-contrast: 0deg 0% 98.4%;
+  --hi-contrast: 0deg 0% 0%;
+}
+
+@theme inline {
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-manrope, var(--font-dm-sans));
+}
+
+@theme {
+  /* Supabase's type scale: every step sits about one notch below stock Tailwind.
+     This is most of why the design reads dense and technical rather than generic. */
+  --text-base: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.375rem;
+  --text-3xl: 1.75rem;
+  --text-4xl: 2.125rem;
+  --text-5xl: 2.875rem;
+  --text-6xl: 3.625rem;
+  --text-7xl: 4.375rem;
+  --font-weight-normal: 450;
+
+  --color-background: hsl(var(--background-default));
+  --color-background-200: hsl(var(--background-200));
+  --color-default: hsl(var(--background-default));
+  --color-alternative: hsl(var(--background-alternative-default));
+  --color-alternative-200: hsl(var(--background-alternative-200));
+  --color-muted: hsl(var(--background-muted));
+  --color-selection: hsl(var(--background-selection));
+  --color-control: hsl(var(--background-control));
+
+  --color-surface-75: hsl(var(--background-surface-75));
+  --color-surface-100: hsl(var(--background-surface-100));
+  --color-surface-200: hsl(var(--background-surface-200));
+  --color-surface-300: hsl(var(--background-surface-300));
+  --color-surface-400: hsl(var(--background-surface-400));
+
+  --color-foreground: hsl(var(--foreground-default));
+  --color-foreground-light: hsl(var(--foreground-light));
+  --color-foreground-lighter: hsl(var(--foreground-lighter));
+  --color-foreground-muted: hsl(var(--foreground-muted));
+  --color-foreground-contrast: hsl(var(--foreground-contrast));
+  --color-hi-contrast: hsl(var(--hi-contrast));
+
+  --color-border: hsl(var(--border-default));
+  --color-border-default: hsl(var(--border-default));
+  --color-border-muted: hsl(var(--border-muted));
+  --color-border-strong: hsl(var(--border-strong));
+  --color-border-stronger: hsl(var(--border-stronger));
+  --color-border-overlay: hsl(var(--border-overlay));
+  --color-border-control: hsl(var(--border-control));
+  --color-border-button: hsl(var(--border-button-default));
+  --color-border-button-hover: hsl(var(--border-button-hover));
+
+  --color-brand: hsl(var(--brand-default));
+  --color-brand-link: hsl(var(--brand-link));
+  --color-brand-200: hsl(var(--brand-200));
+  --color-brand-300: hsl(var(--brand-300));
+  --color-brand-400: hsl(var(--brand-400));
+  --color-brand-500: hsl(var(--brand-500));
+  --color-brand-600: hsl(var(--brand-600));
+  --color-brand-highlight: var(--brand-highlight);
+
+  --color-destructive: hsl(var(--destructive-default));
+  --color-destructive-200: hsl(var(--destructive-200));
+  --color-destructive-300: hsl(var(--destructive-300));
+  --color-destructive-400: hsl(var(--destructive-400));
+  --color-destructive-500: hsl(var(--destructive-500));
+  --color-destructive-600: hsl(var(--destructive-600));
+
+  --color-warning: hsl(var(--warning-default));
+  --color-warning-200: hsl(var(--warning-200));
+  --color-warning-300: hsl(var(--warning-300));
+  --color-warning-400: hsl(var(--warning-400));
+  --color-warning-500: hsl(var(--warning-500));
+  --color-warning-600: hsl(var(--warning-600));
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+@utility section-container {
+  @apply w-full mx-auto max-w-7xl px-6 lg:px-12 xl:px-24;
+}
+
+@utility focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-highlight focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+@layer base {
+  html {
+    font-weight: 450;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1 {
+    @apply font-heading font-medium tracking-normal;
+  }
+
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading font-semibold;
+  }
+
+  ::selection {
+    background: hsl(var(--brand-300));
+  }
+}
+
+/* Supabase's marketing type classes. `.label` is the mono uppercase eyebrow. */
+@layer components {
+  .h1 {
+    @apply font-heading text-4xl font-medium;
+    line-height: 1.2;
+  }
+
+  .h2 {
+    @apply font-heading text-4xl font-semibold;
+    line-height: 1.2;
+  }
+
+  .h3 {
+    @apply font-heading text-2xl font-semibold;
+  }
+
+  .p {
+    @apply text-foreground-light;
+  }
+
+  .small {
+    @apply text-foreground-lighter text-xs;
+  }
+
+  .label {
+    @apply text-xs font-mono uppercase text-foreground-lighter tracking-wider;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

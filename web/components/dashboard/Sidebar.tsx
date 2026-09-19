@@ -1,0 +1,159 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { FlaskConical, Layers, Network, SlidersHorizontal } from 'lucide-react';
+import { BrandMark } from '@/components/layout/BrandMark';
+import ThemeToggle from '@/components/layout/ThemeToggle';
+import { Dialog } from '@/components/ui/dialog';
+import { getConfig, listRuns } from '@/lib/api';
+import type { Config, RunSummary } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const NAV = [
+  { href: '/dashboard', label: 'Lab', icon: FlaskConical },
+  { href: '/dashboard/runs', label: 'Experiments', icon: Layers },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const [config, setConfig] = useState<Config | null>(null);
+  const [runs, setRuns] = useState<RunSummary[]>([]);
+  const [dialog, setDialog] = useState<'how' | 'connections' | null>(null);
+
+  useEffect(() => {
+    getConfig().then(setConfig).catch(() => {});
+    listRuns().then(setRuns).catch(() => {});
+  }, [pathname]);
+
+  return (
+    <>
+      <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col gap-1 border-r border-border bg-alternative px-3 py-5 max-lg:w-[64px] max-lg:items-center">
+        <div className="mb-8 px-1 max-lg:mb-6 max-lg:px-0">
+          <BrandMark className="max-lg:[&>span:last-child]:hidden" />
+        </div>
+
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors max-lg:justify-center max-lg:px-2',
+                active
+                  ? 'bg-brand-200 text-brand'
+                  : 'text-foreground-light hover:bg-surface-200 hover:text-foreground'
+              )}
+            >
+              <Icon size={17} strokeWidth={1.75} />
+              <span className="max-lg:hidden">{label}</span>
+              {href === '/dashboard/runs' && runs.length > 0 && (
+                <span className="ml-auto text-xs text-foreground-lighter max-lg:hidden">
+                  {runs.length}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => setDialog('how')}
+          className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground-light transition-colors hover:bg-surface-200 hover:text-foreground max-lg:justify-center max-lg:px-2"
+        >
+          <Network size={17} strokeWidth={1.75} />
+          <span className="max-lg:hidden">How it works</span>
+        </button>
+
+        <div className="mt-auto flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => setDialog('connections')}
+            className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground-light transition-colors hover:bg-surface-200 hover:text-foreground max-lg:justify-center max-lg:px-2"
+          >
+            <SlidersHorizontal size={17} strokeWidth={1.75} />
+            <span className="max-lg:hidden">Connections</span>
+            <span
+              aria-hidden
+              className={cn(
+                'ml-auto size-1.5 rounded-full max-lg:hidden',
+                config?.liveResearch ? 'bg-brand' : 'bg-foreground-muted'
+              )}
+            />
+          </button>
+          <div className="px-1 max-lg:px-0">
+            <ThemeToggle />
+          </div>
+        </div>
+      </aside>
+
+      <Dialog open={dialog === 'how'} onClose={() => setDialog(null)} label="The evolution loop">
+        <div className="flex flex-col gap-4 text-sm text-foreground-light">
+          <h2 className="text-2xl text-foreground">A population of ideas. A visible lineage.</h2>
+          <ol className="flex list-decimal flex-col gap-2 pl-5">
+            <li><strong className="font-normal text-foreground">Research once.</strong> Turn the product, audience and goal into evidence-linked creative hypotheses. Demo mode uses your brief only.</li>
+            <li><strong className="font-normal text-foreground">Generate genomes.</strong> Give every concept a hook, visual approach, emotional angle, proof point, call to action and palette.</li>
+            <li><strong className="font-normal text-foreground">Screen, then render.</strong> A cheap design heuristic screens every concept. The shortlist preserves a slot for a different direction. Only selected concepts become images.</li>
+            <li><strong className="font-normal text-foreground">Evaluate and select.</strong> Use your relative emotional priorities to rank eligible candidates.</li>
+            <li><strong className="font-normal text-foreground">Recombine and mutate.</strong> Preserve the best candidate, mix parent genes and change individual traits.</li>
+            <li><strong className="font-normal text-foreground">Review the finalists.</strong> Inspect genomes, compare generations and download the drafts.</li>
+          </ol>
+          <h3 className="text-lg text-foreground">What the score means</h3>
+          <p>
+            The demo score is a transparent, unvalidated design heuristic. TRIBE predicts
+            population-average cortical activity and needs a separately trained emotion decoder
+            before it can estimate your chosen responses. Neither score is a conversion forecast.
+          </p>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={dialog === 'connections'}
+        onClose={() => setDialog(null)}
+        label="Model connections"
+      >
+        <div className="flex flex-col gap-4 text-sm text-foreground-light">
+          <h2 className="text-2xl text-foreground">Your models, connected locally.</h2>
+          {config ? (
+            <>
+              <dl className="flex flex-col divide-y divide-border border-y border-border">
+                {[
+                  ['Research & concept generation', config.liveResearch],
+                  ['Image generation', config.liveImages],
+                  ['Calibrated TRIBE worker', config.tribe],
+                ].map(([label, on]) => (
+                  <div key={label as string} className="flex items-center justify-between gap-4 py-2.5">
+                    <dt>{label as string}</dt>
+                    <dd className={on ? 'text-brand' : 'text-foreground-lighter'}>
+                      {on ? 'Configured' : 'Not connected'}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p>
+                Credentials stay in the local server environment and are never sent to the browser.
+                Configured credentials do not guarantee model access or worker readiness.
+              </p>
+              <p className="text-xs text-foreground-lighter">
+                Text model <code className="text-foreground">{config.textModel}</code>
+                <br />
+                Image model <code className="text-foreground">{config.imageModel}</code>
+                <br />
+                TRIBE <code className="text-foreground">{config.tribeStatus}</code>
+              </p>
+              <p>
+                To enable live generation, copy <code>.env.example</code> to <code>.env</code>, set{' '}
+                <code>OPENAI_API_KEY</code> and restart the server. For TRIBE scoring, follow{' '}
+                <code>worker/WORKER.md</code>.
+              </p>
+            </>
+          ) : (
+            <p>Loading configuration…</p>
+          )}
+        </div>
+      </Dialog>
+    </>
+  );
+}
