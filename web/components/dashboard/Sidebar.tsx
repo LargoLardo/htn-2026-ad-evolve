@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { FlaskConical, Layers, Network, SlidersHorizontal } from 'lucide-react';
 import { BrandMark } from '@/components/layout/BrandMark';
-import ThemeToggle from '@/components/layout/ThemeToggle';
 import { Dialog } from '@/components/ui/dialog';
 import { getConfig, listRuns } from '@/lib/api';
 import type { Config, RunSummary } from '@/lib/types';
@@ -29,12 +28,16 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col gap-1 border-r border-border bg-alternative px-3 py-5 max-lg:w-[64px] max-lg:items-center">
-        {/* The collapsed rail is 64px wide, which the wordmark cannot fit, so it
-            drops out entirely there rather than being clipped. */}
-        <div className="mb-8 px-1 max-lg:hidden">
-          <BrandMark />
+      <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col border-r border-border bg-alternative max-lg:w-[64px] max-lg:items-center">
+        {/* Brand sits in its own band whose height matches the top bar, so the
+            two horizontal rules line up across the sidebar seam. The collapsed
+            64px rail cannot fit the wordmark, so it drops out there. */}
+        <div className="flex h-12 shrink-0 items-center border-b border-border px-4 max-lg:justify-center max-lg:px-0">
+          <BrandMark className="max-lg:hidden" />
         </div>
+
+        <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4 max-lg:w-full max-lg:items-center max-lg:px-2">
+          <p className="label px-3 pb-1 max-lg:hidden">Workspace</p>
 
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
@@ -69,24 +72,22 @@ export default function Sidebar() {
           <span className="max-lg:hidden">How it works</span>
         </button>
 
-        <div className="mt-auto flex flex-col gap-1">
-          <button
-            type="button"
-            onClick={() => setDialog('connections')}
-            className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground-light transition-colors hover:bg-surface-200 hover:text-foreground max-lg:justify-center max-lg:px-2"
-          >
-            <SlidersHorizontal size={17} strokeWidth={1.75} />
-            <span className="max-lg:hidden">Connections</span>
-            <span
-              aria-hidden
-              className={cn(
-                'ml-auto size-1.5 rounded-full max-lg:hidden',
-                config?.liveResearch ? 'bg-brand' : 'bg-foreground-muted'
-              )}
-            />
-          </button>
-          <div className="px-1 max-lg:px-0">
-            <ThemeToggle />
+          <div className="mt-auto flex w-full flex-col gap-1 border-t border-border pt-3">
+            <button
+              type="button"
+              onClick={() => setDialog('connections')}
+              className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground-light transition-colors hover:bg-surface-200 hover:text-foreground max-lg:justify-center max-lg:px-2"
+            >
+              <SlidersHorizontal size={17} strokeWidth={1.75} />
+              <span className="max-lg:hidden">Connections</span>
+              <span
+                aria-hidden
+                className={cn(
+                  'ml-auto size-1.5 rounded-full max-lg:hidden',
+                  config?.liveResearch ? 'bg-brand' : 'bg-foreground-muted'
+                )}
+              />
+            </button>
           </div>
         </div>
       </aside>
