@@ -105,7 +105,15 @@ export default function MapsView({ run }: { run: Run }) {
     source.onmessage = event => {
       try {
         const next = JSON.parse(event.data) as MapsJob;
-        setJob(next);
+        setJob(previous => {
+          // A finished target has written its artifact, so the list of
+          // available maps is stale from this moment, not from the end of the
+          // whole job. Waiting for the job would hide a map that already
+          // exists behind the progress bar of the one still building.
+          const settled = (state: MapsJob | null) => (state?.targets ?? []).filter(t => t.status !== 'queued' && t.status !== 'running').length;
+          if (settled(next) > settled(previous)) refreshAvailable();
+          return next;
+        });
         if (next.status !== 'running') { source.close(); setBuilding(false); refreshAvailable(); }
       } catch { /* a malformed frame is not worth tearing the stream down */ }
     };
@@ -167,7 +175,9 @@ export default function MapsView({ run }: { run: Run }) {
   }, [data, layer, metric]);
 
   if (available === null) return <Empty>Looking for precomputed maps…</Empty>;
-  if (job && job.status === 'running') return <BuildProgress job={job} />;
+  const progress = job && job.status === 'running' ? <BuildProgress job={job} /> : null;
+  // Only take over the whole tab when there is genuinely nothing to show yet.
+  if (progress && !options.length) return progress;
   if (!options.length) return (
     <Empty>
       <p>No maps for this run yet.</p>
@@ -184,8 +194,8 @@ export default function MapsView({ run }: { run: Run }) {
       </button>
     </Empty>
   );
-  if (error) return <Empty>{error}</Empty>;
-  if (!data || !values) return <Empty>Loading maps…</Empty>;
+  if (error) return <>{progress}<Empty>{error}</Empty></>;
+  if (!data || !values) return <>{progress}<Empty>Loading maps…</Empty></>;
 
   const grid = data.grid;
   const hasImpact = Boolean(data.impact);
@@ -193,6 +203,7 @@ export default function MapsView({ run }: { run: Run }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {progress}
       <div className="flex flex-wrap items-center gap-2">
         {(['attention', 'impact', 'gap'] as Layer[]).map(name => (
           <button
