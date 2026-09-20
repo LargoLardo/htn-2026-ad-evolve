@@ -1,6 +1,243 @@
 {
-  "schema": "evolve-brain-mesh-v2",
+  "schema": "evolve-brain-mesh-v3",
   "surface": "fsaverage5 pial",
+  "parcels": [
+    {
+      "index": 1,
+      "name": "A1",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 2,
+      "name": "A4",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 3,
+      "name": "A5",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 4,
+      "name": "LBelt",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 5,
+      "name": "MBelt",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 6,
+      "name": "PBelt",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 7,
+      "name": "STGa",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 8,
+      "name": "STSda",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 9,
+      "name": "STSdp",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 10,
+      "name": "STSva",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 11,
+      "name": "STSvp",
+      "family": "auditory_engagement"
+    },
+    {
+      "index": 12,
+      "name": "44",
+      "family": "language_message"
+    },
+    {
+      "index": 13,
+      "name": "45",
+      "family": "language_message"
+    },
+    {
+      "index": 14,
+      "name": "47l",
+      "family": "language_message"
+    },
+    {
+      "index": 15,
+      "name": "IFJa",
+      "family": "language_message"
+    },
+    {
+      "index": 16,
+      "name": "IFJp",
+      "family": "language_message"
+    },
+    {
+      "index": 17,
+      "name": "IFSa",
+      "family": "language_message"
+    },
+    {
+      "index": 18,
+      "name": "IFSp",
+      "family": "language_message"
+    },
+    {
+      "index": 19,
+      "name": "6a",
+      "family": "attention_salience"
+    },
+    {
+      "index": 20,
+      "name": "AVI",
+      "family": "attention_salience"
+    },
+    {
+      "index": 21,
+      "name": "FEF",
+      "family": "attention_salience"
+    },
+    {
+      "index": 22,
+      "name": "FOP1",
+      "family": "attention_salience"
+    },
+    {
+      "index": 23,
+      "name": "FOP2",
+      "family": "attention_salience"
+    },
+    {
+      "index": 24,
+      "name": "FOP3",
+      "family": "attention_salience"
+    },
+    {
+      "index": 25,
+      "name": "FOP4",
+      "family": "attention_salience"
+    },
+    {
+      "index": 26,
+      "name": "FOP5",
+      "family": "attention_salience"
+    },
+    {
+      "index": 27,
+      "name": "IPS1",
+      "family": "attention_salience"
+    },
+    {
+      "index": 28,
+      "name": "LIPd",
+      "family": "attention_salience"
+    },
+    {
+      "index": 29,
+      "name": "LIPv",
+      "family": "attention_salience"
+    },
+    {
+      "index": 30,
+      "name": "MI",
+      "family": "attention_salience"
+    },
+    {
+      "index": 31,
+      "name": "PFm",
+      "family": "attention_salience"
+    },
+    {
+      "index": 32,
+      "name": "PGi",
+      "family": "attention_salience"
+    },
+    {
+      "index": 33,
+      "name": "PGs",
+      "family": "attention_salience"
+    },
+    {
+      "index": 34,
+      "name": "TPOJ1",
+      "family": "attention_salience"
+    },
+    {
+      "index": 35,
+      "name": "TPOJ2",
+      "family": "attention_salience"
+    },
+    {
+      "index": 36,
+      "name": "TPOJ3",
+      "family": "attention_salience"
+    },
+    {
+      "index": 37,
+      "name": "VIP",
+      "family": "attention_salience"
+    },
+    {
+      "index": 38,
+      "name": "a24pr",
+      "family": "attention_salience"
+    },
+    {
+      "index": 39,
+      "name": "p24pr",
+      "family": "attention_salience"
+    },
+    {
+      "index": 40,
+      "name": "FST",
+      "family": "visual_motion"
+    },
+    {
+      "index": 41,
+      "name": "LO1",
+      "family": "visual_motion"
+    },
+    {
+      "index": 42,
+      "name": "LO2",
+      "family": "visual_motion"
+    },
+    {
+      "index": 43,
+      "name": "LO3",
+      "family": "visual_motion"
+    },
+    {
+      "index": 44,
+      "name": "MST",
+      "family": "visual_motion"
+    },
+    {
+      "index": 45,
+      "name": "MT",
+      "family": "visual_motion"
+    },
+    {
+      "index": 46,
+      "name": "V3CD",
+      "family": "visual_motion"
+    },
+    {
+      "index": 47,
+      "name": "V4t",
+      "family": "visual_motion"
+    }
+  ],
   "vertex_order": "left-then-right",
   "vertexCount": 20484,
   "faceCount": 40960,
@@ -145,6 +382,10 @@
     "family.u8": {
       "bytes": 20484,
       "sha256": "7a612d4318b0a5d8bc23232a78e31e4d9b599661fbc5e5348f920f173069b299"
+    },
+    "parcel.u16": {
+      "bytes": 40968,
+      "sha256": "c26b9f5b6b06cb301c8c5dec419d82929625716a5addc399a2f42411f1c934ba"
     }
   },
   "source": {
