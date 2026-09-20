@@ -61,7 +61,7 @@ Each round uses the proxy to choose a shortlist; one slot prefers genome distanc
 - Proxy mode ranks the entire population using the same heuristic.
 - TRIBE mode ranks only candidates evaluated by the worker or carried forward with identical cached media and decoder results. Proxy scores never compete directly with decoder estimates. Unscored concepts remain visible with their own source labels.
 - The highest-scoring eligible candidate is retained unchanged. A second parent balances score with genome distance. Crossover chooses genes from parents; one or sometimes two genes mutate.
-- Finalists come from the distinct eligible archive across all rounds. There are up to three, and identical genomes/copy are deduplicated. Distinct genomes can still yield visually similar images; perceptual deduplication is not implemented.
+- Finalists come from the distinct eligible archive across all rounds. There are up to three, and identical genomes/copy are deduplicated. Distinct genomes can still yield visually similar images; visual deduplication is not implemented.
 
 Next, add separate acceptance gates for product identity, claim support, legibility and brand constraints. Keep diversity in survivor selection. Compare a weighted objective against a Pareto frontier so a high-arousal but unclear creative cannot win purely through emotional intensity. Avoid arbitrary penalties before they have a defined label and evaluation protocol.
 

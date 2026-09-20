@@ -190,7 +190,7 @@ export interface Config {
   liveImages: boolean;
   liveVideos: boolean;
   videoModel: string;
-  /** Percept scoring requires the updated worker endpoint. */
+  /** Neural scoring requires the updated worker endpoint. */
   tribe: boolean;
   /** Multimodal review of rendered images before they are scored. */
   visualScreening: boolean;

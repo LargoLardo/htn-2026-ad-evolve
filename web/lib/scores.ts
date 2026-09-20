@@ -1,34 +1,23 @@
 import type { Candidate, Run } from './types';
 
-export const hasNeural = (candidate: Candidate) => candidate.scores?.neural?.source === 'tribe-percept';
+export const hasNeural = (candidate: Candidate) => candidate.scores?.neural?.source === 'tribe-neural';
 
 export const selectionScore = (candidate: Candidate) =>
   hasNeural(candidate) ? candidate.scores!.neural!.engagementScore : candidate.scores?.fitness;
 
-/** Percept is centred on 50, where 50 means "identical to the original creative". */
-export const PERCEPT_PARITY = 50;
+const NEURAL_PARITY = 50;
 
-/**
- * How a candidate's score should read, given the two scales are not comparable.
- *
- * Percept's engagementScore is a deviation from the original creative; the
- * review fitness is a 0-100 craft rubric where 60 is minimally acceptable. Shown
- * as two bare numbers they look like the same measurement, so a 55 Percept take
- * (better than the original) reads as worse than a 78 review-only draft (merely
- * decent craft). Percept is therefore rendered signed and relative, which no
- * craft score ever is.
- */
 export function scoreDisplay(candidate: Candidate): { value: string; unit: string; title: string } {
   const raw = selectionScore(candidate);
   if (typeof raw !== 'number' || !Number.isFinite(raw)) {
     return { value: '-', unit: '', title: 'Not scored' };
   }
   if (hasNeural(candidate)) {
-    const delta = raw - PERCEPT_PARITY;
+    const delta = raw - NEURAL_PARITY;
     return {
       value: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`,
       unit: 'vs original',
-      title: `Percept ${raw.toFixed(1)} / 100, where ${PERCEPT_PARITY} is identical to the original creative. Predicted cortical response, not measured emotion.`,
+      title: `Neural ${raw.toFixed(1)} / 100, where ${NEURAL_PARITY} is identical to the original creative. Predicted cortical response, not measured emotion.`,
     };
   }
   return {
@@ -38,20 +27,6 @@ export function scoreDisplay(candidate: Candidate): { value: string; unit: strin
   };
 }
 
-/**
- * The compact form, for a graph node with room for one number and no caption.
- *
- * scoreDisplay labels the two scales so they cannot be mistaken for each other,
- * which is enough where there is room to print the unit beside the figure. On a
- * node in the lineage tree there is not: a craft 94.0 sitting next to a Percept
- * -46.4 reads as the higher one winning, when the craft-only candidate never
- * entered the race at all. Only the shortlist of three per generation is ever
- * scored by Percept, because one call costs about two minutes of GPU time.
- *
- * So a node carries a number only when Percept actually measured it. Everything
- * else says so plainly and keeps its craft score in the tooltip, where the
- * label can explain what it is.
- */
 export function nodeScore(candidate: Candidate): { value: string | null; unit: string; title: string } {
   if (hasNeural(candidate)) {
     const { value, unit, title } = scoreDisplay(candidate);
@@ -62,7 +37,7 @@ export function nodeScore(candidate: Candidate): { value: string | null; unit: s
     value: null,
     unit: 'not scored',
     title: typeof craft === 'number' && Number.isFinite(craft)
-      ? `Media review only: ${craft.toFixed(1)} / 100 for craft and brief alignment, where 60 is minimally acceptable and 80 is strong. It was not shortlisted, so Percept never scored it.`
+      ? `Media review only: ${craft.toFixed(1)} / 100 for craft and brief alignment, where 60 is minimally acceptable and 80 is strong. Not shortlisted for neural scoring.`
       : 'Never scored.',
   };
 }
@@ -83,14 +58,14 @@ export function nodeScoreBar(candidate: Candidate): { score: number; percent: nu
   return {
     score,
     percent: Math.max(0, Math.min(100, score)),
-    parityPercent: PERCEPT_PARITY,
+    parityPercent: NEURAL_PARITY,
   };
 }
 
 export const scoreLabel = (candidate: Candidate) => hasNeural(candidate)
-  ? 'Percept vs original' : candidate.scores?.review ? 'Media review only' : 'Historical score';
+  ? 'Neural vs original' : candidate.scores?.review ? 'Media review only' : 'Historical score';
 
-export const isPercept = (run: Run) => run.neuralConfig?.version?.startsWith('percept-') || run.rounds.some(r => r.candidates.some(c => c.scores?.source === 'tribe-percept'));
+export const isNeural = (run: Run) => run.neuralConfig?.version?.startsWith('neural-') || run.rounds.some(r => r.candidates.some(c => c.scores?.source === 'tribe-neural'));
 
 /**
  * Mirrors compareCandidates in lib/evolution.mjs: separate tiers, never a

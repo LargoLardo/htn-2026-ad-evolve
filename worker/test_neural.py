@@ -12,13 +12,13 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
-from worker import percept_score as scoring
-from worker import percept_worker as worker
+from worker import neural_score as scoring
+from worker import neural_worker as worker
 
 
-class PerceptTests(unittest.TestCase):
+class ScoringTests(unittest.TestCase):
     def test_exact_upstream_score_parity(self):
-        fixture = json.loads((Path(__file__).resolve().parents[1] / 'tests/fixtures/percept-oracle.json').read_text())
+        fixture = json.loads((Path(__file__).resolve().parents[1] / 'tests/fixtures/neural-oracle.json').read_text())
         base = np.random.default_rng(fixture['base_seed']).normal(size=(10, 20484)).astype(np.float32)
         for case in fixture['cases']:
             values = np.random.default_rng(case['seed']).normal(size=(case['frames'], 20484)).astype(np.float32) + case['shift']
@@ -85,7 +85,7 @@ class PerceptTests(unittest.TestCase):
         runtime = {'test': 'v1'}
         key = hashlib.sha256(json.dumps([item['media_hash'], 'video', 'contract', runtime], sort_keys=True).encode()).hexdigest()
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'percept' / f'{key}.npz'
+            path = Path(tmp) / 'neural' / f'{key}.npz'
             path.parent.mkdir()
             np.savez(path, predictions=np.ones((12, 20484)), tr=1)
             values, tr, cached = worker.extract_media(item, None, Path(tmp), 'contract', runtime)

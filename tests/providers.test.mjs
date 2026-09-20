@@ -54,7 +54,7 @@ test('image generation supplies actual pixels and scores persist across IDs', as
     if (url.includes('/images/generations')) return Response.json({ data: [{ b64_json: (await fixture('red.png')).toString('base64') }] });
     calls++;
     const body = JSON.parse(options.body);
-    assert.equal(body.action, 'percept');
+    assert.equal(body.action, 'neural');
     assert.equal(body.contract_hash, contract.hash);
     assert.equal(body.candidates[0].media_type, 'image');
     return Response.json(scoreResponse(body));
@@ -67,7 +67,7 @@ test('image generation supplies actual pixels and scores persist across IDs', as
   assert.deepEqual(second.results[0].neural, first.results[0].neural);
   assert.equal(second.results[0].cached, true);
   assert.equal(third.results[0].cached, true);
-  assert.equal(first.results[0].neural.source, 'tribe-percept');
+  assert.equal(first.results[0].neural.source, 'tribe-neural');
   await assert.rejects(scoreTribe([{ ...draft, asset: { ...asset, mediaHash: 'wrong' } }], brief), /hash mismatch/);
   await assert.rejects(scoreTribe([{ ...draft, asset: { url: '/assets/../../secret.png' } }], brief), /actual PNG or MP4/);
 });

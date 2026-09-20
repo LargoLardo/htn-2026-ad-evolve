@@ -3,7 +3,7 @@
 Cloudflare migration: see [deployment and credential setup](docs/CLOUDFLARE_DEPLOY.md).
 The Worker implementation lives in `cloudflare/`; local Node hosting remains available.
 
-Generate ad takes, review the actual media, then evolve the strongest takes using Percept's published TRIBE scoring method. Images use OpenAI image generation; videos use **Seedance 2.0 through Pika**. Research, concept writing and media review use OpenAI.
+Generate ad takes, review the actual media, then evolve the strongest takes using TRIBE neural scoring. Images use OpenAI image generation; videos use **Seedance 2.0 through Pika**. Research, concept writing and media review use OpenAI.
 
 ## Run locally
 
@@ -26,7 +26,7 @@ Open http://127.0.0.1:3001. The Next.js interface proxies API requests and media
 
 Set `OPENAI_API_KEY` for research, images and review, `PIKA_API_KEY` for video generation, and `BASETEN_TRIBE_ENDPOINT` / `BASETEN_API_KEY` for neural scoring. Alternatively, `TRIBE_SCORE_URL` / `TRIBE_TOKEN` can address a worker implementing the same JSON contract. `FFMPEG_BIN` can override the FFmpeg executable. Configuration indicators only check settings; they do not wake a GPU or validate credentials.
 
-**Live runs require the matching GPU worker.** The Percept worker has been verified with real image and video inference on Baseten's `L4:2x24x96` instance. Configure the app with an endpoint deployed from this source; older pooled-feature endpoints cannot provide these scores. Experimental decoder training remains paused. See [worker setup and scoring](worker/README.md).
+**Live runs require the matching GPU worker.** The TRIBE worker has been verified with real image and video inference on Baseten's `L4:2x24x96` instance. Configure the app with an endpoint deployed from this source; older pooled-feature endpoints cannot provide these scores. Experimental decoder training remains paused. See [worker setup and scoring](worker/README.md).
 
 ## Evolution loop
 
@@ -35,15 +35,15 @@ Set `OPENAI_API_KEY` for research, images and review, `PIKA_API_KEY` for video g
 3. Generate the population. Seedance videos use 720p, 4–15 seconds (default 10), and portrait, landscape or square format. Image takes are 1024×1024. The genome includes hook, visual, emotion, proof, CTA, palette, motion and audio.
 4. Review actual pixels, copy, product visibility, supported claims and brief alignment. Video review samples six frames and transcribes audio with Whisper; it does **not** assess every frame or motion smoothness. All checks must pass and quality/alignment must each reach 60. The shortlist uses review scores and observed visual diversity.
 5. Evaluate at most K shortlisted takes per generation with TRIBE. An uploaded original receives one additional baseline evaluation. Without an upload, the first shortlisted take becomes the original. That original stays fixed throughout the run.
-6. Rank evaluated, reviewed takes by Percept's overall neural score. Review quality breaks exact neural ties. Retain the winner and use crossover and exactly one gene mutation per child to produce the next generation. Emotion sliders guide concepts; they do not change neural score weights.
+6. Rank evaluated, reviewed takes by overall neural score. Review quality breaks exact neural ties. Retain the winner and use crossover and exactly one gene mutation per child to produce the next generation. Emotion sliders guide concepts; they do not change neural score weights.
 
 If every review fails, retain a **nonempty provisional shortlist**. Failed checks remain visible and failed; provisional drafts compete only while no reviewed neural candidates are available. They are marked as needing review, including in the final results. A shortlist of one may produce fewer than three distinct finalists.
 
-## Percept scoring
+## Neural scoring
 
-The implementation targets [Percept `worker/app.py` at commit `000f26d`](https://github.com/edrlu/Percept/blob/000f26d529e0b87b2478142bd8b5ebf40e44e313/worker/app.py). It uses the same Glasser parcel groups, original-media temporal normalization, parcel-balanced averages, four equally weighted families, clipping and NumPy/Python rounding. Offline tests compare complete outputs against five results produced by Percept's unmodified scoring functions.
+The scoring implementation uses the same Glasser parcel groups, original-media temporal normalization, parcel-balanced averages, four equally weighted families, clipping and NumPy/Python rounding as the upstream TRIBE worker.
 
-Each image becomes a 10-second silent video during inference. Both media types then use Percept's shorter-side-256 preprocessing and TRIBE's video/audio/transcript event assembly. Full time series are scored; predictions are no longer pooled before normalization.
+Each image becomes a 10-second silent video during inference. Both media types then use shorter-side-256 preprocessing and TRIBE's video/audio/transcript event assembly. Full time series are scored; predictions are no longer pooled before normalization.
 
 The four families are auditory engagement, language/message, attention/salience and visual/motion. Their average is a predicted cortical-response proxy, **not a validated emotion, preference or conversion score**. A score of 50 is the transform's zero-z midpoint; self-normalization does not guarantee exactly 50 after clipping. Scores from runs with different originals are not directly comparable.
 
@@ -64,7 +64,7 @@ Seedance follows [Pika's model-specific REST specification](https://mcp.pika.art
 npm run check
 npm run build --prefix web
 npm test
-.venv/bin/python -m unittest worker.test_percept training.test_training training.test_pause
+.venv/bin/python -m unittest worker.test_neural training.test_training training.test_pause
 npm run smoke  # existing local server; no generation or GPU calls
 ```
 

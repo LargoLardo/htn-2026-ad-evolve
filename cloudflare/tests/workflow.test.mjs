@@ -27,8 +27,8 @@ it('runs the shared engine through a durable human gate and resumes after evicti
       }
       const jobId = sha256(stable([workflowId, 'score-1', id(1), hash, 'self', contract.hash]));
       await m.mockStepResult({ name: `score-1-${id(1)}-enqueue` }, null);
-      await m.mockEvent({ type: `percept-${jobId.slice(0, 48)}`, payload: { jobId } });
-      await m.mockStepResult({ name: `score-1-${id(1)}-result` }, { baseline, calls: 1, results: [{ id: id(1), mediaHash: hash, neural: { source: 'tribe-percept', engagementScore: 50, baselineHash: baseline.hash, baselineMediaHash: hash, contractHash: contract.hash, provenance: 'TEST' } }] });
+      await m.mockEvent({ type: `neural-${jobId.slice(0, 48)}`, payload: { jobId } });
+      await m.mockStepResult({ name: `score-1-${id(1)}-result` }, { baseline, calls: 1, results: [{ id: id(1), mediaHash: hash, neural: { source: 'tribe-neural', engagementScore: 50, baselineHash: baseline.hash, baselineMediaHash: hash, contractHash: contract.hash, provenance: 'TEST' } }] });
     });
     await doc.initialize(accountId, run);
     await runInDurableObject(doc, async (_, state) => { await state.storage.deleteAlarm(); await state.storage.put('started', true); });

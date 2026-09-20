@@ -31,7 +31,7 @@ const database = databases.find(db => db.name === 'advolve-index') || await api(
 const buckets = await api('/r2/buckets');
 if (!buckets.buckets.some(bucket => bucket.name === 'advolve-assets')) await api('/r2/buckets', 'POST', { name: 'advolve-assets' });
 const queues = await api('/queues?per_page=100');
-if (!queues.some(queue => queue.queue_name === 'advolve-percept')) await api('/queues', 'POST', { queue_name: 'advolve-percept' });
+if (!queues.some(queue => queue.queue_name === 'advolve-neural')) await api('/queues', 'POST', { queue_name: 'advolve-neural' });
 const config = JSON.parse(await readFile(resolve(root, 'cloudflare/wrangler.jsonc'), 'utf8'));
 config.account_id = process.env.CLOUDFLARE_ACCOUNT_ID;
 config.d1_databases[0].database_id = database.uuid;

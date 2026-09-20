@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "An evolutionary creative lab with image/video evolution and Percept-compatible TRIBE scoring.",
+  "description": "An evolutionary creative lab with image/video evolution and TRIBE neural scoring.",
   "engines": {
     "node": ">=22"
   },

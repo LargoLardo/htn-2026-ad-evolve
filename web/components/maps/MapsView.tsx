@@ -6,7 +6,7 @@ import { assetLink } from '@/lib/api';
 import type { Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-/** Percept's four families, plus the two synthetic layers this view adds.
+/** The four neural families, plus the two synthetic layers this view adds.
  *  auditory_engagement and visual_motion are auditory cortex and the MT+ motion
  *  complex, so on a silent still they sit at parity and read as flat. They are
  *  offered, not defaulted to. */
@@ -359,7 +359,7 @@ export default function MapsView({ run }: { run: Run }) {
           <Legend layer={layer} />
           {!hasImpact && (
             <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
-              Only the attention map is available. {data.impactError ?? 'The impact map needs the Percept worker.'}
+              Only the attention map is available. {data.impactError ?? 'The impact map needs the TRIBE worker.'}
             </p>
           )}
           {elements.length > 0 && (
@@ -405,7 +405,7 @@ export default function MapsView({ run }: { run: Run }) {
                 </span>
                 . Predicted, not observed.
               </>
-            ) : '. The impact map needs the Percept worker.'}
+            ) : '. The impact map needs the TRIBE worker.'}
           </p>
         </div>
       </div>
@@ -528,7 +528,7 @@ function BuildProgress({ job }: { job: MapsJob }) {
       <div className="flex flex-col gap-1">
         <p className="text-sm text-foreground">Building maps</p>
         <p className="text-xs text-foreground-lighter">
-          Each pass hides one region of the ad and rescores it with Percept. Nothing is lost
+          Each pass hides one region of the ad and rescores it with TRIBE. Nothing is lost
           if you leave this tab.
         </p>
       </div>

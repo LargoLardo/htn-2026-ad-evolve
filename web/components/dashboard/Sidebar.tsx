@@ -99,13 +99,13 @@ export default function Sidebar() {
             <li><strong className="font-normal text-foreground">Research once.</strong> Turn the product, audience and goal into evidence-linked creative hypotheses.</li>
             <li><strong className="font-normal text-foreground">Generate traits.</strong> Give every concept a hook, visual approach, emotional angle, proof point, call to action, palette, motion and audio.</li>
             <li><strong className="font-normal text-foreground">Generate and review media.</strong> Create images or Seedance video takes. Review actual pixels, copy and claims; video review samples six frames and transcribes audio. Shortlist reviewed takes and retain provisional drafts if all fail.</li>
-            <li><strong className="font-normal text-foreground">Evaluate and select.</strong> Score shortlisted takes with Percept’s four Glasser families against a fixed original baseline. Images become 10-second videos. Selection takes the largest predicted response; emotion priorities guide concepts only. Read that number as response magnitude, not quality.</li>
+            <li><strong className="font-normal text-foreground">Evaluate and select.</strong> Score shortlisted takes with four Glasser families against a fixed original baseline. Images become 10-second videos. Selection takes the largest predicted response; emotion priorities guide concepts only. Read that number as response magnitude, not quality.</li>
             <li><strong className="font-normal text-foreground">Recombine and mutate.</strong> Preserve the best candidate, mix parent-node traits and change exactly one trait per child.</li>
             <li><strong className="font-normal text-foreground">Review the finalists.</strong> Inspect traits, compare rounds and download the drafts.</li>
           </ol>
           <h3 className="text-lg text-foreground">What the score means</h3>
           <p>
-            Percept scoring summarizes predicted cortical activity. It needs no fitted decoder,
+            Neural scoring summarizes predicted cortical activity. It needs no fitted decoder,
             but is not a validated emotion or conversion score. An uploaded original is the fixed
             baseline; otherwise the first shortlisted take establishes it.
           </p>
@@ -134,7 +134,7 @@ export default function Sidebar() {
                   ['Image generation', config.liveImages],
                   ['Seedance 2.0 videos', config.liveVideos],
                   ['Media review', config.visualScreening],
-                  ['Percept/TRIBE scoring', config.tribe],
+                  ['TRIBE scoring', config.tribe],
                 ].map(([label, on]) => (
                   <div key={label as string} className="flex items-center justify-between gap-4 py-2.5">
                     <dt>{label as string}</dt>
@@ -159,7 +159,7 @@ export default function Sidebar() {
                 To enable live generation, copy <code>.env.example</code> to <code>.env</code>, set{' '}
                 <code>OPENAI_API_KEY</code> and <code>PIKA_API_KEY</code>, then restart the API server.
               </p>
-              <h3 className="text-lg text-foreground">Percept/TRIBE scoring</h3>
+              <h3 className="text-lg text-foreground">TRIBE scoring</h3>
               <p className="text-xs text-foreground-lighter">{config.tribeStatus}</p>
               <p>
                 Needs an updated scoring endpoint (<code>BASETEN_TRIBE_ENDPOINT</code> with{' '}

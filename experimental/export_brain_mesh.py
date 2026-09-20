@@ -1,12 +1,12 @@
-"""Export the fsaverage5 pial surface and Percept family map for the web brain view.
+"""Export the fsaverage5 pial surface and neural family map for the web brain view.
 
     python -m pip install nilearn
     python -m experimental.export_brain_mesh
 
 Vertex order is left-then-right, matching worker/assets/glasser-fsaverage5.json and the
-20,484-vertex predictions Percept scores, so vertex i here is vertex i there. The family
-map is derived from worker/percept_score.py itself, so the surface cannot drift from the
-parcels that produce the scores.
+20,484-vertex predictions the scoring worker produces, so vertex i here is vertex i there.
+The family map is derived from worker/neural_score.py itself, so the surface cannot drift
+from the parcels that produce the scores.
 """
 import argparse
 import hashlib
@@ -23,7 +23,7 @@ HEMISPHERE_VERTICES = 10242
 DIMENSION = 20484
 
 # Why each family's parcels sit where they do. Every DOI below was checked against
-# Crossref; the parcel lists themselves come from worker/percept_score.py, not from here.
+# Crossref; the parcel lists themselves come from worker/neural_score.py, not from here.
 EVIDENCE = {
     'auditory_engagement': {
         'anatomy': 'Auditory core (A1), surrounding belt (MBelt, LBelt, PBelt) and parabelt '
@@ -63,38 +63,38 @@ EVIDENCE = {
 }
 
 
-def percept_module():
-    spec = importlib.util.spec_from_file_location("percept_score", ROOT / "worker/percept_score.py")
+def neural_module():
+    spec = importlib.util.spec_from_file_location("neural_score", ROOT / "worker/neural_score.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-def family_map(percept):
+def family_map(scorer):
     """Family per vertex (0 unassigned, 1-4 in FAMILIES order) and parcel per vertex.
 
-    Parcels are numbered 1-N across families in the same order percept_score.parcel_traces
+    Parcels are numbered 1-N across families in the same order neural_score.parcel_traces
     emits them, and the manifest records each name so the client matches by name, never
     by position.
     """
     labels = np.zeros(DIMENSION, dtype=np.uint8)
     parcel_labels = np.zeros(DIMENSION, dtype=np.uint16)
-    groups = percept.family_parcels(percept.load_atlas())
+    groups = scorer.family_parcels(scorer.load_atlas())
     catalogue, number = [], 0
-    for index, ((key, *_), parcels) in enumerate(zip(percept.FAMILIES, groups), start=1):
+    for index, ((key, *_), parcels) in enumerate(zip(scorer.FAMILIES, groups), start=1):
         for name, indices in parcels.items():
             number += 1
             labels[indices] = index
             parcel_labels[indices] = number
             catalogue.append({"index": number, "name": name, "family": key})
     if not labels.any():
-        raise ValueError("No Percept family matched any atlas parcel.")
+        raise ValueError("No neural family matched any atlas parcel.")
     return labels, parcel_labels, catalogue, groups
 
 
 def export(output_dir):
     output_dir = Path(output_dir)
-    percept = percept_module()
+    scorer = neural_module()
     fsaverage = fetch_surf_fsaverage("fsaverage5")
     left_coordinates, left_faces = load_surf_mesh(fsaverage["pial_left"])
     right_coordinates, right_faces = load_surf_mesh(fsaverage["pial_right"])
@@ -107,7 +107,7 @@ def export(output_dir):
         load_surf_data(fsaverage["sulc_left"]),
         load_surf_data(fsaverage["sulc_right"]),
     ]).astype(np.float32)
-    families, parcel_labels, catalogue, groups = family_map(percept)
+    families, parcel_labels, catalogue, groups = family_map(scorer)
     if len(coordinates) != DIMENSION or len(sulcal_depth) != DIMENSION:
         raise ValueError("Mesh, curvature and prediction dimensions disagree.")
     if not np.isfinite(coordinates).all() or not np.isfinite(sulcal_depth).all():
@@ -143,7 +143,7 @@ def export(output_dir):
                       "reliability": reliability, "vertexCount": int((families == index).sum()),
                       "parcels": sorted(groups[index - 1]), **EVIDENCE[key]}
                      for index, (key, name, short, color, reliability, _patterns)
-                     in enumerate(percept.FAMILIES, start=1)],
+                     in enumerate(scorer.FAMILIES, start=1)],
         "files": {name: {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
                   for name, payload in files.items()},
         "source": {
@@ -153,8 +153,8 @@ def export(output_dir):
             "modifications": "Hemispheres concatenated left-then-right, axes reordered to Y-up, centred on the bounding box, scaled by 1/100, written as little-endian binary.",
         },
         "atlas": {
-            "name": "Glasser 2016 parcellation, grouped into Percept families",
-            "source": "worker/assets/glasser-fsaverage5.json via worker/percept_score.py",
+            "name": "Glasser 2016 parcellation, grouped into neural families",
+            "source": "worker/assets/glasser-fsaverage5.json via worker/neural_score.py",
             "attribution": "worker/assets/ATTRIBUTION.md",
         },
     }

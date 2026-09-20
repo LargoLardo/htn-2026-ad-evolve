@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 /** The mesh is fsaverage5 in left-then-right vertex order, the same order the worker
- *  scores, and aFamily is the Percept family each vertex belongs to (0 = none, 1-4 in
+ *  scores, and aFamily is the neural family each vertex belongs to (0 = none, 1-4 in
  *  FAMILIES order). See experimental/export_brain_mesh.py. */
 const MESH_FILES = ['positions.f32', 'indices.u32', 'sulc.f32', 'family.u8', 'parcel.u16'] as const;
 

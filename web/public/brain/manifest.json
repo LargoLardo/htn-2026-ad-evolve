@@ -395,8 +395,8 @@
     "modifications": "Hemispheres concatenated left-then-right, axes reordered to Y-up, centred on the bounding box, scaled by 1/100, written as little-endian binary."
   },
   "atlas": {
-    "name": "Glasser 2016 parcellation, grouped into Percept families",
-    "source": "worker/assets/glasser-fsaverage5.json via worker/percept_score.py",
+    "name": "Glasser 2016 parcellation, grouped into neural families",
+    "source": "worker/assets/glasser-fsaverage5.json via worker/neural_score.py",
     "attribution": "worker/assets/ATTRIBUTION.md"
   }
 }

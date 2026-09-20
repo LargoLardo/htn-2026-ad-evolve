@@ -1,4 +1,4 @@
-"""Percept scoring worker; legacy feature/head endpoints remain experimental."""
+"""Neural scoring worker; legacy feature/head endpoints remain experimental."""
 import base64
 import errno
 import hashlib
@@ -14,9 +14,9 @@ from affect_decoder import AffectDecoder, load_spec, spec_hash
 from clip_cache import install_exact_clip_cache
 import tribe_worker
 try:
-    import percept_worker
+    import neural_worker
 except ImportError:
-    from worker import percept_worker
+    from worker import neural_worker
 
 
 def writable_cache(preferred, fallback):
@@ -49,9 +49,9 @@ class Model:
         self.secrets = kwargs.get("secrets", {})
         self.data_dir = Path(kwargs.get("data_dir", "data"))
         self.spec = load_spec()
-        self.percept_spec, self.percept_contract_hash = percept_worker.contract()
-        if any(self.spec[key] != self.percept_spec[key] for key in ['model_repo', 'model_revision', 'code_revision', 'encoders']):
-            raise ValueError('Loaded TRIBE/encoder pins must match the Percept scoring contract.')
+        self.neural_spec, self.neural_contract_hash = neural_worker.contract()
+        if any(self.spec[key] != self.neural_spec[key] for key in ['model_repo', 'model_revision', 'code_revision', 'encoders']):
+            raise ValueError('Loaded TRIBE/encoder pins must match the neural scoring contract.')
         self.feature_spec_hash = spec_hash(self.spec)
         self.decoder = None
         self.lock = threading.Lock()
@@ -98,7 +98,7 @@ class Model:
         tribe_worker.REVISION = self.spec["model_revision"]
         tribe_worker.CODE_REVISION = self.spec["code_revision"]
         print("Loading TRIBE checkpoint onto GPU...", flush=True)
-        tribe_worker.MODEL = TribeModel.from_pretrained(checkpoint, cache_folder=str(cache / "percept-features-v1"),
+        tribe_worker.MODEL = TribeModel.from_pretrained(checkpoint, cache_folder=str(cache / "neural-features-v1"),
             device="cuda", config_update=config_update)
         import neuralset.extractors.video as video_extractors
         self.clip_cache_stats = {"hits": 0, "misses": 0, "verification_forwards": 0}
@@ -117,17 +117,17 @@ class Model:
         action = model_input.get("action", "features")
         if action == "health":
             return {"feature_spec_hash": self.feature_spec_hash,
-                "percept_contract_hash": self.percept_contract_hash, "percept_version": self.percept_spec['version'],
+                "neural_contract_hash": self.neural_contract_hash, "neural_version": self.neural_spec['version'],
                 "labels": ["valence", "arousal"], "decoder_version": self.decoder.metadata["version"] if self.decoder else None,
                 "runtime_versions": getattr(self, "runtime_versions", {}), "model_loaded": tribe_worker.MODEL is not None}
-        if action == "percept":
+        if action == "neural":
             if tribe_worker.MODEL is None:
                 raise RuntimeError("TRIBE model is not loaded.")
             with self.lock:
-                return percept_worker.score_batch(model_input, tribe_worker.MODEL, tribe_worker.CACHE,
+                return neural_worker.score_batch(model_input, tribe_worker.MODEL, tribe_worker.CACHE,
                     getattr(self, "runtime_versions", {}))
         if action not in ["features", "score"]:
-            raise ValueError("action must be health, percept, features or score.")
+            raise ValueError("action must be health, neural, features or score.")
         if action == "score":
             if self.decoder is None:
                 raise ValueError("No affect decoder has been fitted and bundled. Use action=features first.")

@@ -161,9 +161,9 @@ class TrainingTests(unittest.TestCase):
     def test_related_and_duplicate_images_stay_together(self):
         rng = np.random.default_rng(10)
         rows = [{"id": f"I{i}", "theme_group": f"theme-{i // 2}", "media_hash": str(i),
-            "perceptual_hash": f"{int(rng.integers(0, 2**63)):016x}"} for i in range(40)]
+            "visual_hash": f"{int(rng.integers(0, 2**63)):016x}"} for i in range(40)]
         rows[4]["media_hash"] = rows[0]["media_hash"]
-        rows[8]["perceptual_hash"] = rows[0]["perceptual_hash"]
+        rows[8]["visual_hash"] = rows[0]["visual_hash"]
         assign_splits(rows, 42)
         self.assertEqual(len({rows[i]["group"] for i in [0, 1, 4, 5, 8, 9]}), 1)
         self.assertEqual(len({rows[i]["split"] for i in [0, 1, 4, 5, 8, 9]}), 1)

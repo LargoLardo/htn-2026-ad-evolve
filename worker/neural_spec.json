@@ -16,9 +16,9 @@
       "revision": "da985ba0987f70aaeb84a80f2851cfac8c697a7b"
     }
   },
-  "schema": "evolve-percept-v1",
-  "version": "percept-glasser-000f26d-v1",
-  "percept_revision": "000f26d529e0b87b2478142bd8b5ebf40e44e313",
+  "schema": "evolve-neural-v1",
+  "version": "neural-glasser-000f26d-v1",
+  "neural_revision": "000f26d529e0b87b2478142bd8b5ebf40e44e313",
   "atlas_sha256": "535e4059bc28c55fbf4219f4a8e63f59fe71d16596732992ade8f4b475e9322c",
   "protocol": "video-short-side256-asr-image10s-v1",
   "scoring": "temporal-z-1e-6-bilateral-parcel-balanced-four-family-f32-rounded-v1"
