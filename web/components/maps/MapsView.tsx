@@ -38,6 +38,12 @@ interface MapsArtifact {
   impactError?: string | null;
 }
 
+interface MapsJob {
+  status: 'idle' | 'running' | 'complete' | 'failed' | 'empty';
+  grid?: number;
+  targets: { mediaHash: string; label: string; status: string; done: number; total: number; error?: string | null }[];
+}
+
 const normalize = (values: number[]) => {
   const min = Math.min(...values), max = Math.max(...values);
   return max - min < 1e-12 ? values.map(() => 0) : values.map(v => (v - min) / (max - min));
@@ -51,6 +57,8 @@ export default function MapsView({ run }: { run: Run }) {
   const [layer, setLayer] = useState<Layer>('gap');
   const [metric, setMetric] = useState<string>('attention_salience');
   const [showLabels, setShowLabels] = useState(true);
+  const [job, setJob] = useState<MapsJob | null>(null);
+  const [building, setBuilding] = useState(false);
 
   /** Every still in the run that could have maps: the uploaded original first,
    *  then finalists, then everything else. Most runs have no uploaded original,
@@ -67,14 +75,56 @@ export default function MapsView({ run }: { run: Run }) {
     return [...seen.values()];
   }, [run]);
 
+  const refreshAvailable = () => {
+    fetch('/api/maps')
+      .then(r => r.json())
+      .then(list => setAvailable(Array.isArray(list) ? list : []))
+      .catch(() => setAvailable([]));
+  };
+
   useEffect(() => {
     let live = true;
     fetch('/api/maps')
       .then(r => r.json())
       .then(list => live && setAvailable(Array.isArray(list) ? list : []))
       .catch(() => live && setAvailable([]));
+    // A build survives a page reload, so adopt one that is already going
+    // rather than offering to start a second.
+    fetch(`/api/runs/${run.id}/maps`)
+      .then(r => r.json())
+      .then(state => { if (live && state?.status === 'running') setJob(state); })
+      .catch(() => {});
     return () => { live = false; };
-  }, []);
+  }, [run.id]);
+
+  // One stream per build. It closes itself when the job finishes, and the
+  // artifact list is refetched so the new maps appear without a reload.
+  useEffect(() => {
+    if (!job || job.status !== 'running') return;
+    const source = new EventSource(`/api/runs/${run.id}/maps/stream`);
+    source.onmessage = event => {
+      try {
+        const next = JSON.parse(event.data) as MapsJob;
+        setJob(next);
+        if (next.status !== 'running') { source.close(); setBuilding(false); refreshAvailable(); }
+      } catch { /* a malformed frame is not worth tearing the stream down */ }
+    };
+    source.onerror = () => { source.close(); setBuilding(false); };
+    return () => source.close();
+  }, [job?.status, run.id]);
+
+  const startBuild = async () => {
+    setBuilding(true);
+    try {
+      const response = await fetch(`/api/runs/${run.id}/maps`, { method: 'POST' });
+      const state = await response.json();
+      if (!response.ok) throw new Error(state.error ?? 'Could not start the map build.');
+      setJob(state);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not start the map build.');
+      setBuilding(false);
+    }
+  };
 
   const options = useMemo(
     () => (available ? mappable.filter(item => available.includes(item.hash)) : []),
@@ -117,10 +167,21 @@ export default function MapsView({ run }: { run: Run }) {
   }, [data, layer, metric]);
 
   if (available === null) return <Empty>Looking for precomputed maps…</Empty>;
+  if (job && job.status === 'running') return <BuildProgress job={job} />;
   if (!options.length) return (
     <Empty>
-      No precomputed maps for any image in this run. Build one with{' '}
-      <code>node scripts/build-demo-maps.mjs --image data/assets/&lt;hash&gt;.png</code>
+      <p>No maps for this run yet.</p>
+      <p className="mt-1 text-xs">
+        Maps occlude the original and the winner one region at a time and rescore each
+        pass, so a build takes a few minutes of GPU.
+      </p>
+      <button
+        onClick={startBuild}
+        disabled={building || run.status === 'running'}
+        className="focus-ring mt-4 rounded-md border border-brand-400 bg-brand-200 px-3 py-1.5 text-sm text-brand transition-colors disabled:opacity-40"
+      >
+        {run.status === 'running' ? 'Waiting for the run to finish' : building ? 'Starting…' : 'Build maps for this run'}
+      </button>
     </Empty>
   );
   if (error) return <Empty>{error}</Empty>;
@@ -369,3 +430,49 @@ const Empty = ({ children }: { children: React.ReactNode }) => (
     {children}
   </div>
 );
+
+
+/** The build, pass by pass.
+ *
+ * A percentage would be a worse thing to watch than the count of regions
+ * already rescored, because the count says what the machine is actually doing
+ * and a percentage only says how long is left.
+ */
+function BuildProgress({ job }: { job: MapsJob }) {
+  return (
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface-75 p-5">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm text-foreground">Building maps</p>
+        <p className="text-xs text-foreground-lighter">
+          Each pass hides one region of the ad and rescores it with Percept. Nothing is lost
+          if you leave this tab.
+        </p>
+      </div>
+      {job.targets.map(target => {
+        const fraction = target.total ? target.done / target.total : 0;
+        return (
+          <div key={target.mediaHash} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between gap-3 text-xs">
+              <span className="text-foreground">{target.label}</span>
+              <span className="tabular-nums text-foreground-lighter">
+                {target.status === 'queued' && 'queued'}
+                {target.status === 'running' && (target.total ? `${target.done}/${target.total} regions` : 'predicting gaze…')}
+                {target.status === 'done' && 'done'}
+                {target.status === 'attention-only' && 'attention only'}
+                {target.status === 'failed' && 'failed'}
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-surface-300">
+              <div
+                className={cn('h-full rounded-full transition-[width] duration-500',
+                  target.status === 'failed' ? 'bg-destructive' : 'bg-brand')}
+                style={{ width: `${target.status === 'done' ? 100 : Math.round(fraction * 100)}%` }}
+              />
+            </div>
+            {target.error && <p className="text-xs text-foreground-lighter">{target.error}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
