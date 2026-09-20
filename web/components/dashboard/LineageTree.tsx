@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePanZoom } from '@/lib/usePanZoom';
 import { assetLink } from '@/lib/api';
 import { nodeScore, nodeScoreBar, scoreLabel } from '@/lib/scores';
 import type { Candidate, Run } from '@/lib/types';
@@ -34,11 +35,8 @@ const EASE = 18;
 
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 2.5;
-/** Pointer travel, in pixels, past which a gesture was a pan and the click it
- *  ends with should not open a creative. */
-const DRAG_SLOP = 4;
 
-const clampScale = (scale: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+
 
 /** An "Elite retained" child is the parent copied, not a new creative. It gets a
  *  dashed edge so a converged run looks converged instead of productive. */
@@ -144,134 +142,18 @@ export default function LineageTree({
   // A run of three generations at eight wide is wider than any screen, and the
   // scrolling strip it used to live in let you see a row at a time, which is
   // the one thing a lineage view must not do. Pan and zoom instead.
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<{ distance: number; scale: number } | null>(null);
-  // A pan and a click both end in a pointerup, so without this every pan that
-  // finished over a node would open it.
-  const travelled = useRef(0);
+  const { viewportRef, view, onPointerDown, wasPan, zoomAtCentre, fit: fitTo, reveal: revealAt } =
+    usePanZoom<HTMLDivElement>({ min: MIN_SCALE, max: MAX_SCALE });
 
-  const fit = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || !layout.width || !layout.height) return;
-    const padding = 32;
-    // Never magnify past life size on fit: a two-node run blown up to fill the
-    // viewport looks like a bug rather than a small run.
-    const scale = clampScale(Math.min(
-      (viewport.clientWidth - padding * 2) / layout.width,
-      (viewport.clientHeight - padding * 2) / layout.height,
-      1,
-    ));
-    setView({
-      scale,
-      x: (viewport.clientWidth - layout.width * scale) / 2,
-      y: (viewport.clientHeight - layout.height * scale) / 2,
-    });
-  }, [layout.width, layout.height]);
-
+  const fit = useCallback(() => fitTo(layout.width, layout.height), [fitTo, layout.width, layout.height]);
   useEffect(() => { fit(); }, [fit]);
-
-  /** Zoom about a point in viewport coordinates, so whatever is under the
-   *  cursor stays under the cursor. */
-  const zoomAt = useCallback((factor: number, cx: number, cy: number) => {
-    setView(current => {
-      const scale = clampScale(current.scale * factor);
-      const ratio = scale / current.scale;
-      return { scale, x: cx - (cx - current.x) * ratio, y: cy - (cy - current.y) * ratio };
-    });
-  }, []);
-
-  const zoomAtCentre = useCallback((factor: number) => {
-    const viewport = viewportRef.current;
-    if (viewport) zoomAt(factor, viewport.clientWidth / 2, viewport.clientHeight / 2);
-  }, [zoomAt]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    // Registered by hand because React attaches wheel passively, so calling
-    // preventDefault on its synthetic event does nothing and the page scrolls
-    // out from behind the graph while you are trying to zoom it.
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const rect = viewport.getBoundingClientRect();
-      zoomAt(Math.exp(-event.deltaY * 0.0015), event.clientX - rect.left, event.clientY - rect.top);
-    };
-    viewport.addEventListener('wheel', onWheel, { passive: false });
-    return () => viewport.removeEventListener('wheel', onWheel);
-  }, [zoomAt]);
-
-  useEffect(() => {
-    // On window rather than the viewport so a pan that leaves the element, which
-    // is most of them, keeps tracking instead of sticking.
-    const onMove = (event: PointerEvent) => {
-      const previous = pointers.current.get(event.pointerId);
-      if (!previous) return;
-      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      const points = [...pointers.current.values()];
-      const viewport = viewportRef.current;
-
-      if (points.length === 2 && pinch.current && viewport) {
-        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
-        if (!pinch.current.distance) return;
-        const rect = viewport.getBoundingClientRect();
-        const cx = (points[0].x + points[1].x) / 2 - rect.left;
-        const cy = (points[0].y + points[1].y) / 2 - rect.top;
-        const target = clampScale(pinch.current.scale * (distance / pinch.current.distance));
-        travelled.current = Infinity;
-        setView(current => {
-          const ratio = target / current.scale;
-          return { scale: target, x: cx - (cx - current.x) * ratio, y: cy - (cy - current.y) * ratio };
-        });
-        return;
-      }
-
-      const dx = event.clientX - previous.x, dy = event.clientY - previous.y;
-      travelled.current += Math.hypot(dx, dy);
-      setView(current => ({ ...current, x: current.x + dx, y: current.y + dy }));
-    };
-    const onRelease = (event: PointerEvent) => {
-      pointers.current.delete(event.pointerId);
-      if (pointers.current.size < 2) pinch.current = null;
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onRelease);
-    window.addEventListener('pointercancel', onRelease);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onRelease);
-      window.removeEventListener('pointercancel', onRelease);
-    };
-  }, []);
-
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    travelled.current = 0;
-    if (pointers.current.size === 2) {
-      const [a, b] = [...pointers.current.values()];
-      pinch.current = { distance: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale };
-    }
-  };
 
   /** Keyboard focus moves between nodes that may be off screen, and a
    *  transformed element cannot be scrolled into view, so pan to it instead. */
-  const reveal = useCallback((x: number, y: number) => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    setView(current => {
-      const padding = 16;
-      const left = x * current.scale + current.x, top = y * current.scale + current.y;
-      const right = left + NODE_W * current.scale, bottom = top + NODE_H * current.scale;
-      let nextX = current.x, nextY = current.y;
-      if (left < padding) nextX += padding - left;
-      else if (right > viewport.clientWidth - padding) nextX -= right - (viewport.clientWidth - padding);
-      if (top < padding) nextY += padding - top;
-      else if (bottom > viewport.clientHeight - padding) nextY -= bottom - (viewport.clientHeight - padding);
-      return { ...current, x: nextX, y: nextY };
-    });
-  }, []);
+  const reveal = useCallback(
+    (x: number, y: number) => revealAt(x, y, NODE_W, NODE_H),
+    [revealAt]
+  );
 
   if (!layout.nodes.length) return null;
 
@@ -419,7 +301,7 @@ export default function LineageTree({
             return (
               <button
                 key={candidate.id}
-                onClick={() => { if (travelled.current <= DRAG_SLOP) onInspect(candidate); }}
+                onClick={() => { if (!wasPan()) onInspect(candidate); }}
                 onMouseEnter={() => setHovered(candidate.id)}
                 onMouseLeave={() => setHovered(current => (current === candidate.id ? null : current))}
                 onFocus={() => { setHovered(candidate.id); reveal(x, y); }}

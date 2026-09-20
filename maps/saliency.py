@@ -57,13 +57,14 @@ def load_image(path):
     return np.array(image)
 
 
-def saliency(image, device):
+def saliency(image, device, model=None):
     """Return a normalised 0-1 density the same size as the input image."""
     # EfficientNet prints "Loaded pretrained weights..." straight to stdout, which
     # corrupts the JSON this script exists to emit. Everything the model says goes
     # to stderr; stdout carries the result and nothing else.
-    with contextlib.redirect_stdout(sys.stderr):
-        model = DeepGazeIIE(pretrained=True).to(device).eval()
+    if model is None:
+        with contextlib.redirect_stdout(sys.stderr):
+            model = DeepGazeIIE(pretrained=True).to(device).eval()
     tensor = torch.tensor(image.transpose(2, 0, 1)[np.newaxis], dtype=torch.float32, device=device)
 
     # Uniform centerbias, deliberately.

@@ -1,0 +1,17 @@
+model_name: advolve-media
+python_version: py311
+requirements_file: requirements.txt
+external_package_dirs:
+  - ../../maps
+system_packages:
+  - ffmpeg
+  - git
+resources:
+  cpu: "4"
+  memory: 16Gi
+  use_gpu: false
+runtime:
+  predict_concurrency: 1
+environment_variables:
+  TORCH_HOME: /tmp/advolve-torch
+  XDG_CACHE_HOME: /tmp/advolve-cache

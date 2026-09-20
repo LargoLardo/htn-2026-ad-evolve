@@ -257,3 +257,19 @@ test('single-gene mutation from main is preserved alongside the eight-gene pipel
     assert.equal(Object.keys(child.genome).length, 8);
   }
 });
+
+test('manual parent selection controls the elite and removes killed nodes from finalists', async () => {
+  let chosen, killed;
+  const result = await evolveRun(createRun(validateBrief({ ...input, rounds: 2 })), providers, {
+    chooseParents: async ({ eligibleIds }) => {
+      chosen = eligibleIds.at(-1); killed = eligibleIds[0];
+      return { parentIds: [chosen], killedIds: [killed], note: 'Simplify the composition.' };
+    },
+  });
+  assert.equal(result.status, 'completed', result.error);
+  assert.deepEqual(result.rounds[0].selectedIds, [chosen]);
+  assert.deepEqual(result.rounds[1].candidates[0].parents, [chosen]);
+  assert.ok(result.rounds[1].candidates.every(c => c.parents.every(id => id === chosen)));
+  assert.ok(result.finalists.every(c => c.id !== killed));
+  assert.equal(result.brief.impactNotes, 'Simplify the composition.');
+});

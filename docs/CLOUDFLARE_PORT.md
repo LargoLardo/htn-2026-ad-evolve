@@ -1,7 +1,26 @@
 # Porting Advolve to Cloudflare
 
-Written against the tree at `feat/attention-impact-maps`. This is a conversion
-plan, not a record of work done. Nothing in it has been built.
+The migration is implemented in `cloudflare/`, with deployment instructions in
+[CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md). Local runtime tests and OpenNext
+builds pass; live deployment awaits account credentials and the separate
+Baseten media service. The design below records the original porting rationale.
+
+Current implementation:
+
+- Shared provider, evolution and map logic serve both Node and Workers.
+- Account-scoped R2, D1 indexes, SQLite run Durable Objects, Queue and Workflows.
+- Automatic/manual parent selection shares the engine hook; manual waits on a
+  native event, with saved decisions and a UI that always retains a parent.
+- Optional winner maps update feedback at each breeding boundary.
+- Video remains supported via durable Seedance polling and Baseten FFmpeg review.
+- `deploy/baseten-media` reuses the exact DeepGaze grid/saliency implementation.
+- `lib/grid.mjs`, the Percept spec and the 10-second image stimulus are unchanged.
+- Node data stays intact. Historical bytes/hashes must be preserved on import.
+
+Local tests cover account/JWT isolation, image ingestion, ranges, chunked state,
+Queue redelivery, replica readiness and a two-round Workflow pause/resume.
+They use mocked paid responses; real Images masking and hosted GPU inference
+still need a deployment smoke test.
 
 ## What the thing actually is today
 

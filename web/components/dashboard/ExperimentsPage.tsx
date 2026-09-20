@@ -13,10 +13,16 @@ import { cn } from '@/lib/utils';
 
 const STATUS_STYLE: Record<string, string> = {
   running: 'border-brand-400 text-brand',
+  'awaiting-selection': 'border-brand-400 text-brand',
   completed: 'border-border text-foreground-light',
   cancelled: 'border-border text-foreground-lighter',
   failed: 'border-destructive-500 text-destructive',
 };
+
+/** A run parked at a round gate keeps the status 'running' and changes stage, so
+ *  the list would call it running and nothing would say a person is the reason
+ *  it stopped. This list is where someone decides a run has hung and kills it. */
+const waitingOnYou = (run: RunSummary) => run.stage === 'awaiting-selection';
 
 /** The primary surface: the list of runs. Creating one is transient work that
  *  happens in a panel, so it never occupies the layout permanently. */
@@ -73,7 +79,7 @@ export default function ExperimentsPage({ duplicateOf }: { duplicateOf?: Brief |
             <h2 className="text-lg text-foreground">No experiments yet</h2>
             <p className="max-w-[46ch] text-sm text-foreground-lighter">
               Describe a product and Advolve will generate a population of ad concepts,
-              screen them, then recombine the survivors across generations.
+              screen them, then recombine the survivors across rounds.
             </p>
             <Button
               type="button"
@@ -112,10 +118,11 @@ export default function ExperimentsPage({ duplicateOf }: { duplicateOf?: Brief |
                     <span
                       className={cn(
                         'w-24 shrink-0 rounded border px-1.5 py-0.5 text-center text-[10px] uppercase tracking-wider',
-                        STATUS_STYLE[run.status] ?? 'border-border text-foreground-lighter'
+                        STATUS_STYLE[waitingOnYou(run) ? 'awaiting-selection' : run.status] ??
+                          'border-border text-foreground-lighter'
                       )}
                     >
-                      {run.status}
+                      {waitingOnYou(run) ? 'waiting for you' : run.status}
                     </span>
                   </Link>
                 </li>

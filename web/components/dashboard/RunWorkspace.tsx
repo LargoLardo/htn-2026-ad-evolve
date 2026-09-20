@@ -6,6 +6,7 @@ import { Download } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import CreativeInspector from './CreativeInspector';
+import RoundGate from './RoundGate';
 import LineageTree from './LineageTree';
 import { assetLink, exportHref, safeLink } from '@/lib/api';
 import { type Candidate, type Run, type RunStage } from '@/lib/types';
@@ -16,11 +17,12 @@ import { cn } from '@/lib/utils';
 const STAGE_TEXT: Record<RunStage, string> = {
   queued: 'Queued.',
   research: 'Researching the brief…',
-  generating: 'Generating creative genomes…',
+  generating: 'Generating creative traits…',
   screening: 'Reviewing media, copy and claims…',
   rendering: 'Rendering the shortlist…',
   scoring: 'Scoring rendered candidates…',
   evolving: 'Recombining and mutating…',
+  'awaiting-selection': 'Choose the parents for the next round.',
   finalizing: 'Selecting finalists…',
   complete: 'Run complete.',
   cancelled: 'Run cancelled.',
@@ -169,6 +171,8 @@ export default function RunWorkspace({
         </dl>
       </div>
 
+      {run.gate && run.gate.status !== 'resolved' && running && <RoundGate key={run.gate.token} run={run} gate={run.gate} />}
+
       <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
         {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative, where 50 is parity with it. This is the magnitude of the predicted cortical response, and selection currently takes the largest. A larger response is not evidence of a better ad: a cluttered original with a wall of body text scores highly because it is taxing to read. Predicted response only, not measured emotion, engagement or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}
         {run.requiresReview && ' No drafts passed review. The retained provisional drafts need review and revision.'}
@@ -298,7 +302,7 @@ function FitnessChart({ run }: { run: Run }) {
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface-100 p-5">
-      <h3 className="label">{isPercept(run) ? 'Percept score by generation' : 'Historical scores by generation'}</h3>
+      <h3 className="label">{isPercept(run) ? 'Percept score by round' : 'Historical scores by round'}</h3>
       {/* Capped rather than flex-1: at full dashboard width, one bar per
           generation stretched into wide slabs that read as blocks, not a chart. */}
       <div className="flex items-end gap-6">
@@ -316,7 +320,7 @@ function FitnessChart({ run }: { run: Run }) {
                 title={`Mean ${score(round.mean)}`}
               />
             </div>
-            <span className="text-[10px] text-foreground-lighter">Gen {round.number}</span>
+            <span className="text-[10px] text-foreground-lighter">Round {round.number}</span>
           </div>
         ))}
       </div>
