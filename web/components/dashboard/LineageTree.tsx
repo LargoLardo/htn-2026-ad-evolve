@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { assetLink } from '@/lib/api';
-import { scoreDisplay, scoreLabel } from '@/lib/scores';
+import { nodeScore, scoreLabel } from '@/lib/scores';
 import type { Candidate, Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -17,10 +17,10 @@ import { cn } from '@/lib/utils';
  * second reading is the true one.
  */
 
-const NODE_W = 108;
-const NODE_H = 132;
-const GAP_X = 26;
-const GAP_Y = 64;
+const NODE_W = 150;
+const NODE_H = 186;
+const GAP_X = 30;
+const GAP_Y = 88;
 
 /** An "Elite retained" child is the parent copied, not a new creative. It gets a
  *  dashed edge so a converged run looks converged instead of productive. */
@@ -33,6 +33,10 @@ export default function LineageTree({
   run: Run;
   onInspect: (candidate: Candidate) => void;
 }) {
+  // Crossing-minimisation gets the tangle down but cannot remove it: a child
+  // has two parents that may sit anywhere. Isolating one node's lineage on
+  // hover makes any individual descent readable no matter how dense the whole.
+  const [hovered, setHovered] = useState<string | null>(null);
   const layout = useMemo(() => {
     const rows = run.rounds.map(round => round.candidates);
     const widest = Math.max(1, ...rows.map(r => r.length));
@@ -40,10 +44,28 @@ export default function LineageTree({
     const position = new Map<string, { x: number; y: number; candidate: Candidate; gen: number }>();
 
     rows.forEach((candidates, rowIndex) => {
+      // Order each row under its parents before placing it.
+      //
+      // Children were previously laid out in the order they were created, which
+      // has nothing to do with where their parents sit, so almost every edge
+      // crossed almost every other one. Sorting a row by the mean position of
+      // its parents is the standard crossing-minimisation step, and on a row of
+      // eight it is the difference between a graph and a ball of wool.
+      const barycentre = (candidate: Candidate) => {
+        const parents = (candidate.parents ?? []).map(id => position.get(id)?.x).filter((x): x is number => typeof x === 'number');
+        // A node with no placed parent keeps its own order rather than piling
+        // up at zero, which would drag unrelated nodes to the left edge.
+        return parents.length ? parents.reduce((sum, x) => sum + x, 0) / parents.length : Number.POSITIVE_INFINITY;
+      };
+      const ordered = rowIndex === 0 ? candidates : [...candidates]
+        .map((candidate, index) => ({ candidate, index, key: barycentre(candidate) }))
+        .sort((a, b) => (a.key - b.key) || (a.index - b.index))
+        .map(entry => entry.candidate);
+
       // Centre short rows against the widest one so edges stay readable.
-      const rowWidth = candidates.length * NODE_W + (candidates.length - 1) * GAP_X;
+      const rowWidth = ordered.length * NODE_W + (ordered.length - 1) * GAP_X;
       const offset = (width - rowWidth) / 2;
-      candidates.forEach((candidate, i) => {
+      ordered.forEach((candidate, i) => {
         position.set(candidate.id, {
           x: offset + i * (NODE_W + GAP_X),
           y: rowIndex * (NODE_H + GAP_Y),
@@ -101,7 +123,9 @@ export default function LineageTree({
             height={layout.height}
             aria-hidden
           >
-            {layout.edges.map((edge, i) => (
+            {layout.edges.map((edge, i) => {
+              const related = !hovered || edge.from === hovered || edge.to === hovered;
+              return (
               <path
                 key={i}
                 // Vertical cubic: leaves the parent downward and enters the child
@@ -110,20 +134,27 @@ export default function LineageTree({
                 d={`M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.y1 + GAP_Y / 2}, ${edge.x2} ${edge.y2 - GAP_Y / 2}, ${edge.x2} ${edge.y2}`}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.5"
+                strokeWidth={related && hovered ? 2.5 : 1.5}
                 strokeDasharray={edge.carried ? '3 3' : undefined}
+                className="transition-opacity duration-150"
+                opacity={related ? (hovered ? 1 : 0.55) : 0.08}
               />
-            ))}
+              );
+            })}
           </svg>
 
           {layout.nodes.map(({ candidate, x, y, gen }) => {
             const src = assetLink(candidate.asset?.url);
-            const shown = scoreDisplay(candidate);
+            const shown = nodeScore(candidate);
             return (
               <button
                 key={candidate.id}
                 onClick={() => onInspect(candidate)}
-                title={`${scoreLabel(candidate)} · ${candidate.mutation ?? ''}`}
+                onMouseEnter={() => setHovered(candidate.id)}
+                onMouseLeave={() => setHovered(current => (current === candidate.id ? null : current))}
+                onFocus={() => setHovered(candidate.id)}
+                onBlur={() => setHovered(current => (current === candidate.id ? null : current))}
+                title={`${scoreLabel(candidate)}. ${shown.title} ${candidate.mutation ?? ''}`}
                 style={{ left: x, top: y, width: NODE_W, height: NODE_H }}
                 className={cn(
                   'focus-ring absolute flex flex-col overflow-hidden rounded-md border text-left transition-colors',
@@ -144,11 +175,23 @@ export default function LineageTree({
                   )}
                   <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[9px] text-white">g{gen}</span>
                 </span>
-                <span className="flex flex-1 items-center justify-between gap-1 px-1.5 py-1">
-                  <span className="truncate text-[10px] text-foreground-lighter">
-                    {isCarriedOver(candidate) ? 'copy' : candidate.id.slice(-4)}
+                <span className="flex flex-1 flex-col justify-center gap-0.5 px-2 py-1.5">
+                  <span className="flex items-baseline justify-between gap-1">
+                    <span className="truncate text-[11px] text-foreground-lighter">
+                      {isCarriedOver(candidate) ? 'copy' : candidate.id.slice(-4)}
+                    </span>
+                    {shown.value !== null && (
+                      <span className="text-sm tabular-nums text-foreground">{shown.value}</span>
+                    )}
                   </span>
-                  <span className="text-[11px] tabular-nums text-foreground">{shown.value}</span>
+                  <span
+                    className={cn(
+                      'truncate text-[10px]',
+                      shown.value === null ? 'text-foreground-muted/70 italic' : 'text-foreground-muted'
+                    )}
+                  >
+                    {shown.unit}
+                  </span>
                 </span>
               </button>
             );

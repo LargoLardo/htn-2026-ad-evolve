@@ -38,6 +38,35 @@ export function scoreDisplay(candidate: Candidate): { value: string; unit: strin
   };
 }
 
+/**
+ * The compact form, for a graph node with room for one number and no caption.
+ *
+ * scoreDisplay labels the two scales so they cannot be mistaken for each other,
+ * which is enough where there is room to print the unit beside the figure. On a
+ * node in the lineage tree there is not: a craft 94.0 sitting next to a Percept
+ * -46.4 reads as the higher one winning, when the craft-only candidate never
+ * entered the race at all. Only the shortlist of three per generation is ever
+ * scored by Percept, because one call costs about two minutes of GPU time.
+ *
+ * So a node carries a number only when Percept actually measured it. Everything
+ * else says so plainly and keeps its craft score in the tooltip, where the
+ * label can explain what it is.
+ */
+export function nodeScore(candidate: Candidate): { value: string | null; unit: string; title: string } {
+  if (hasNeural(candidate)) {
+    const { value, unit, title } = scoreDisplay(candidate);
+    return { value, unit, title };
+  }
+  const craft = candidate.scores?.fitness;
+  return {
+    value: null,
+    unit: 'not scored',
+    title: typeof craft === 'number' && Number.isFinite(craft)
+      ? `Media review only: ${craft.toFixed(1)} / 100 for craft and brief alignment, where 60 is minimally acceptable and 80 is strong. It was not shortlisted, so Percept never scored it.`
+      : 'Never scored.',
+  };
+}
+
 export const scoreLabel = (candidate: Candidate) => hasNeural(candidate)
   ? 'Percept vs original' : candidate.scores?.review ? 'Media review only' : 'Historical score';
 
