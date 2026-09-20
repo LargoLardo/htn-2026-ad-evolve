@@ -110,7 +110,7 @@ export default function LineageTree({
         junctionX: childX, junctionY: child.y - JUNCTION_RISE,
         parents: parentIds.map(id => {
           const parent = position.get(id)!;
-          return { x: parent.x + NODE_W / 2, y: parent.y + NODE_H };
+          return { id, x: parent.x + NODE_W / 2, y: parent.y + NODE_H };
         }),
       });
     }
@@ -351,9 +351,14 @@ export default function LineageTree({
                   strokeDasharray={link.carried ? '3 3' : undefined}
                 >
                   {link.parents.map((parent, i) => {
-                    // Vertical cubic: leaves the parent downward and arrives
-                    // downward, so crossings stay legible when one parent has
-                    // many children, which is the common case here.
+                    // Hovering one parent should still admit the other exists.
+                    // Showing only the hovered limb would repeat the original
+                    // lie in a quieter voice: this child had two parents, and
+                    // hiding the second one makes it look like it had one. The
+                    // co-parent's limb therefore stays visible but reads as
+                    // secondary, thin and dashed, so the hovered contribution
+                    // is obvious without erasing the other.
+                    const coParent = Boolean(hovered) && joined && link.childId !== hovered && parent.id !== hovered;
                     const bend = Math.max(16, (endY - parent.y) / 2);
                     return (
                       <path
@@ -361,7 +366,9 @@ export default function LineageTree({
                         d={`M ${parent.x} ${parent.y} C ${parent.x} ${parent.y + bend}, ${endX} ${endY - bend}, ${endX} ${endY}`}
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth={stroke}
+                        strokeWidth={coParent ? 1 : stroke}
+                        strokeDasharray={coParent ? '2 4' : undefined}
+                        opacity={coParent ? 0.55 : undefined}
                       />
                     );
                   })}
