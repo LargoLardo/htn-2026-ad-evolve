@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, cells, disagreements, gap, normalize, reduceToGrid, scoreElements, windows } from '../lib/grid.mjs';
+import { accumulate, cells, disagreements, gap, impactNotes, normalize, reduceToGrid, scoreElements, windows } from '../lib/grid.mjs';
 
 test('cells tile the image exactly, including sizes the grid does not divide', () => {
   for (const [width, height, n] of [[1024, 1024, 3], [1000, 777, 3], [999, 1001, 5], [512, 512, 4]]) {
@@ -89,4 +89,20 @@ test('an element scores from the cells it covers, weighted by overlap', () => {
   assert.equal(b.impact, 0, 'an element away from it stays cold');
   assert.ok(Math.abs(c.impact - 0.5) < 1e-9, 'a straddling element is weighted by area, not by its centre');
   assert.ok(Math.abs(a.coverage - 1 / 3) < 1e-4, 'coverage is the fraction of the ad it occupies');
+});
+
+test('impact notes name what to stop repeating and what to keep', () => {
+  const note = impactNotes([
+    { label: 'headline', gap: 0.74 },
+    { label: 'crowd photo', gap: 0.69 },
+    { label: 'clinking glasses', gap: -0.4 },
+    { label: 'disco ball', gap: 0.05 },
+  ]);
+  assert.match(note, /headline/);
+  assert.match(note, /clinking glasses/);
+  // A cell that agrees is not evidence of anything, so it must not be named.
+  assert.doesNotMatch(note, /disco ball/, 'elements where the two maps agree carry no instruction');
+  // Silence when there is nothing measured to say, rather than an empty preamble.
+  assert.equal(impactNotes([{ label: 'only one', gap: 0.9 }]), '');
+  assert.equal(impactNotes([{ label: 'a', gap: 0.01 }, { label: 'b', gap: -0.02 }]), '');
 });
