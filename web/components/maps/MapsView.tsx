@@ -59,6 +59,10 @@ export default function MapsView({ run }: { run: Run }) {
   const [layer, setLayer] = useState<Layer>('gap');
   const [metric, setMetric] = useState<string>('attention_salience');
   const [showLabels, setShowLabels] = useState(true);
+  // Hovering a row in the ranked list picks its box out of the overlay. With a
+  // dozen boxes on a busy ad the labels necessarily overlap, and the way to
+  // read one of them is to ask for one, not to draw fewer.
+  const [focused, setFocused] = useState<string | null>(null);
   const [job, setJob] = useState<MapsJob | null>(null);
   const [building, setBuilding] = useState(false);
 
@@ -295,20 +299,30 @@ export default function MapsView({ run }: { run: Run }) {
             </div>
           )}
 
-          {showLabels && elements.map((element, index) => (
-            <div
-              key={index}
-              className="pointer-events-none absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
-              style={{
-                left: `${element.x * 100}%`, top: `${element.y * 100}%`,
-                width: `${element.w * 100}%`, height: `${element.h * 100}%`,
-              }}
-            >
-              <span className="absolute left-0 top-0 max-w-full truncate bg-black/80 px-1 text-[10px] text-white">
-                {element.label}
-              </span>
-            </div>
-          ))}
+          {showLabels && elements.map((element, index) => {
+            const dim = focused !== null && focused !== element.label;
+            return (
+              <div
+                key={index}
+                className={cn(
+                  'pointer-events-none absolute transition-opacity duration-150',
+                  focused === element.label
+                    ? 'border-2 border-white shadow-[0_0_0_2px_rgba(0,0,0,0.7)]'
+                    : 'border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.55)]'
+                )}
+                style={{
+                  left: `${element.x * 100}%`, top: `${element.y * 100}%`,
+                  width: `${element.w * 100}%`, height: `${element.h * 100}%`,
+                  opacity: dim ? 0.15 : 1,
+                  zIndex: focused === element.label ? 2 : 1,
+                }}
+              >
+                <span className="absolute left-0 top-0 max-w-full truncate bg-black/80 px-1 text-[10px] text-white">
+                  {element.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex flex-col gap-3 text-sm">
@@ -326,7 +340,15 @@ export default function MapsView({ run }: { run: Run }) {
                   .slice()
                   .sort((a, b) => b.shown - a.shown)
                   .map((element, index) => (
-                    <li key={index} className="flex flex-col gap-1">
+                    <li
+                      key={index}
+                      onMouseEnter={() => setFocused(element.label)}
+                      onMouseLeave={() => setFocused(current => (current === element.label ? null : current))}
+                      className={cn(
+                        'flex cursor-default flex-col gap-1 rounded-md px-2 py-1.5 transition-colors',
+                        focused === element.label ? 'bg-surface-200' : 'bg-transparent'
+                      )}
+                    >
                       <span className="truncate text-xs text-foreground" title={element.label}>{element.label}</span>
                       <Bar label="looked at" value={element.gaze} tint="rgb(148,163,184)" />
                       <Bar label="does" value={element.drive} tint="rgb(148,163,184)" />
@@ -338,8 +360,23 @@ export default function MapsView({ run }: { run: Run }) {
               </ul>
             </div>
           )}
-          <p className="text-xs text-foreground-lighter">{data.attention.provenance}</p>
-          {data.impact && <p className="text-xs text-foreground-lighter">{data.impact.provenance}</p>}
+          {/* One line, with the methodology behind a hover. Two paragraphs of
+              provenance under every map is read once and then never again,
+              which is the opposite of what a caveat is for. */}
+          <p className="text-xs text-foreground-lighter">
+            <span title={data.attention.provenance} className="cursor-help underline decoration-dotted underline-offset-2">
+              Predicted gaze
+            </span>
+            {data.impact ? (
+              <>
+                {' and '}
+                <span title={data.impact.provenance} className="cursor-help underline decoration-dotted underline-offset-2">
+                  measured response
+                </span>
+                . Predicted, not observed.
+              </>
+            ) : '. The impact map needs the Percept worker.'}
+          </p>
         </div>
       </div>
     </div>
