@@ -45,7 +45,7 @@ export default function LineageTree({
     const rows = run.rounds.map(round => round.candidates);
     const widest = Math.max(1, ...rows.map(r => r.length));
     const width = widest * NODE_W + (widest - 1) * GAP_X;
-    const position = new Map<string, { x: number; y: number; candidate: Candidate; gen: number }>();
+    const position = new Map<string, { x: number; y: number; candidate: Candidate; gen: number; rowIndex: number }>();
 
     rows.forEach((candidates, rowIndex) => {
       // Order each row under its parents before placing it.
@@ -75,6 +75,7 @@ export default function LineageTree({
           y: rowIndex * (NODE_H + GAP_Y),
           candidate,
           gen: run.rounds[rowIndex].number,
+          rowIndex,
         });
       });
     });
@@ -106,10 +107,22 @@ export default function LineageTree({
       });
     }
 
+    // Only the parent pool breeds, so most of a generation leaves no
+    // descendants. Fading those explains the density: every line radiates from
+    // a handful of nodes because only a handful were ever bred from, which
+    // otherwise looks like the edges were drawn at random.
+    const bred = new Set(links.flatMap(link => link.parentIds));
+    const lastRow = rows.length - 1;
+
     return {
       width,
       height: rows.length * NODE_H + (rows.length - 1) * GAP_Y,
-      nodes: [...position.values()],
+      nodes: [...position.values()].map(node => ({
+        ...node,
+        // The final generation has no descendants because the run stopped, not
+        // because it was passed over. Fading it would say the opposite.
+        dead: node.rowIndex < lastRow && !bred.has(node.candidate.id),
+      })),
       links,
     };
   }, [run]);
@@ -140,11 +153,18 @@ export default function LineageTree({
           </svg>
           two parents crossed into one child
         </span>
+        {layout.nodes.some(node => node.dead) && (
+          <span className="flex items-center gap-1.5 opacity-40">
+            <span aria-hidden className="size-3 rounded-sm border border-current" />
+            not bred from
+          </span>
+        )}
         {carried > 0 && (
           <span className="text-foreground-light">
             {carried} of {layout.links.length} descendants are copies, not new creatives.
           </span>
         )}
+        <span className="ml-auto">Hover a creative to isolate its lineage.</span>
       </div>
 
       <div className="overflow-auto rounded-lg border border-border bg-surface-75 p-5">
@@ -204,7 +224,7 @@ export default function LineageTree({
             })}
           </svg>
 
-          {layout.nodes.map(({ candidate, x, y, gen }) => {
+          {layout.nodes.map(({ candidate, x, y, gen, dead }) => {
             const src = assetLink(candidate.asset?.url);
             const shown = nodeScore(candidate);
             return (
@@ -218,11 +238,14 @@ export default function LineageTree({
                 title={`${scoreLabel(candidate)}. ${shown.title} ${candidate.mutation ?? ''}`}
                 style={{ left: x, top: y, width: NODE_W, height: NODE_H }}
                 className={cn(
-                  'focus-ring absolute flex flex-col overflow-hidden rounded-md border text-left transition-colors',
+                  'focus-ring absolute flex flex-col overflow-hidden rounded-md border text-left transition-all',
                   candidate.selected
                     ? 'border-brand-400 ring-1 ring-brand-400'
                     : 'border-border hover:border-border-stronger',
-                  isCarriedOver(candidate) ? 'bg-surface-200 opacity-80' : 'bg-surface-100'
+                  isCarriedOver(candidate) ? 'bg-surface-200' : 'bg-surface-100',
+                  // Faded, never hidden: it was made and reviewed, it just was
+                  // not bred from, and that is worth being able to look at.
+                  dead ? 'opacity-40 hover:opacity-100' : isCarriedOver(candidate) ? 'opacity-80' : ''
                 )}
               >
                 <span className="relative block aspect-square w-full bg-surface-300">
