@@ -89,7 +89,7 @@ test('failed image checks block both parents and finalists before neural inferen
     ...providers,
     screenCandidate: async candidate => {
       const result = await providers.screenCandidate(candidate);
-      if (candidate.headline.includes('route 0')) { result.checks.copyAccurate = false; rejected.add(candidate.id); }
+      if (candidate.headline.includes('route 0')) { result.checks.copyReadable = false; rejected.add(candidate.id); }
       return result;
     },
     scoreTribe: async (candidates, brief, options) => {
@@ -183,11 +183,11 @@ test('all failed reviews retain a nonempty provisional shortlist without changin
   }
 });
 
-test('one passing candidate prevents fallback even if failed drafts have higher scores', async () => {
+test('one passing candidate prevents fallback for unsupported claims even if failed drafts have higher scores', async () => {
   const result = await evolveRun(createRun(validateBrief({ ...input, mode: 'live', scorer: 'tribe', rounds: 1 })), {
     ...providers, screenCandidate: async candidate => {
       const review = await providers.screenCandidate(candidate), passes = candidate.headline.includes('route 0');
-      return { ...review, quality: passes ? 60 : 100, briefAlignment: passes ? 60 : 100, checks: { ...review.checks, copyAccurate: passes } };
+      return { ...review, quality: passes ? 60 : 100, briefAlignment: passes ? 60 : 100, checks: { ...review.checks, claimsSupported: passes } };
     },
   });
   assert.equal(result.status, 'completed', result.error);
@@ -196,6 +196,45 @@ test('one passing candidate prevents fallback even if failed drafts have higher 
   assert.equal(result.requiresReview, false);
   assert.equal(result.finalists.length, 1);
   assert.ok(result.finalists.every(candidate => candidate.scores.eligible && !candidate.provisional));
+});
+
+test('strong new takes with copy warnings compete against a passing original and breed across rounds', async () => {
+  const mediaHash = 'a'.repeat(64);
+  const brief = { ...validateBrief({ ...input, rounds: 2, population: 4, shortlist: 3, originalMediaId: mediaHash }),
+    originalAsset: { url: `/assets/${mediaHash}.png`, mediaHash, mediaType: 'image' } };
+  let originalEvaluations = 0, newEvaluations = 0;
+  const result = await evolveRun(createRun(brief), {
+    ...providers,
+    screenCandidate: async candidate => {
+      const review = await providers.screenCandidate(candidate);
+      return { ...review, mediaHash: candidate.asset.mediaHash, quality: candidate.original ? 85 : 90,
+        checks: { ...review.checks, copyAccurate: Boolean(candidate.original) }, reasons: candidate.original ? [] : ['CTA adds a period'] };
+    },
+    scoreTribe: async (candidates, brief, options) => {
+      const response = await providers.scoreTribe(candidates, brief, options);
+      response.results = response.results.map((item, i) => {
+        const candidate = candidates[i];
+        if (candidate.original) originalEvaluations++; else newEvaluations++;
+        return { ...item, mediaHash: candidate.asset.mediaHash,
+          neural: { ...item.neural, engagementScore: candidate.original ? 50 : 80 } };
+      });
+      return response;
+    },
+  });
+  assert.equal(result.status, 'completed', result.error);
+  assert.equal(originalEvaluations, 1);
+  assert.ok(newEvaluations >= 3);
+  assert.equal(result.neuralBaseline.mediaHash, mediaHash);
+  assert.equal(result.metrics.rejected, 0);
+  assert.equal(result.metrics.provisionalRounds, 0);
+  assert.ok(result.rounds.every(round => round.shortlistIds.length === 3));
+  assert.ok(result.rounds[1].candidates.every(candidate => !candidate.original));
+  assert.ok(result.finalists.every(candidate => !candidate.original && candidate.scores.neural.engagementScore === 80));
+  assert.ok(result.finalists.every(candidate => candidate.scores.eligible && candidate.scores.review.copyWarning
+    && !candidate.scores.review.checks.copyAccurate && !candidate.provisional));
+  assert.equal(result.requiresReview, true);
+  assert.match(result.events.at(-1).message, /copy differences/);
+  assert.doesNotMatch(result.events.at(-1).message, /No drafts passed/);
 });
 
 test('later passing drafts replace earlier provisional winners without rewriting cached reviews', async () => {

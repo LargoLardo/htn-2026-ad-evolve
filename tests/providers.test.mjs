@@ -4,10 +4,53 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { capabilities, generateConcepts, renderCandidate, research, scoreTribe, screenCandidate } from '../lib/providers.mjs';
 import { validateNeural } from '../lib/scoring-contract.mjs';
+import { createProviders, validateScreen } from '../lib/provider-core.mjs';
 import { baselineFor, candidate, contract, fixture, isolatedConfig, openaiResponse, scoreResponse } from './helpers.mjs';
 
 const brief = { product: 'Example', description: 'A reusable notebook', audience: 'Designers', goal: 'Discovery', mode: 'live', population: 1, mediaType: 'image' };
 const draft = { id: 'candidate-1', round: 1, genome: { hook: 'question', visual: 'A notebook on a desk', emotion: 'curiosity', proof: 'Show the notebook', cta: 'Discover', palette: 'sage', motion: 'reveal', audio: 'quiet voice' }, headline: 'Your next idea', body: 'Make space for a fresh idea.', cta: 'Discover Example' };
+
+test('image and video generation preserve the exact requested copy without extra punctuation', async t => {
+  const prompts = [];
+  const copy = { headline: 'Ready for that first sip?', body: 'Keep your drink break simple.', cta: 'Try "a sip"' };
+  const providers = createProviders({
+    env: { OPENAI_API_KEY: 'test-only' },
+    ingestMedia: async (_bytes, _mime, { prompt }) => { prompts.push(prompt); return {}; },
+    renderVideo: async prompt => { prompts.push(prompt); return {}; },
+  });
+  t.mock.method(globalThis, 'fetch', async url => {
+    assert.equal(url, 'https://api.openai.com/v1/images/generations');
+    return Response.json({ data: [{ b64_json: (await fixture('red.png')).toString('base64') }] });
+  });
+  for (const mediaType of ['image', 'video']) await providers.renderCandidate({ ...draft, ...copy }, { ...brief, mediaType, videoDuration: 5, aspectRatio: '1:1' });
+  assert.equal(prompts.length, 2);
+  for (const prompt of prompts) {
+    assert.deepEqual(JSON.parse(prompt.match(/^Required copy: (.+)$/m)[1]), copy);
+    assert.ok(!prompt.includes('sip?.') && !prompt.includes('simple..'));
+  }
+});
+
+test('strong visual quality admits copy warnings while retaining other review requirements', () => {
+  const evidence = { mediaHash: 'test-media', quality: 80, briefAlignment: 60, observedText: 'Try a sip.',
+    checks: { productVisible: true, copyReadable: true, copyAccurate: false, claimsSupported: true, noMajorDefects: true },
+    reasons: ['CTA adds a period'], visualTags: ['bottle'] };
+  const admitted = validateScreen(evidence, evidence.mediaHash);
+  assert.equal(admitted.passed, true);
+  assert.equal(admitted.copyWarning, true);
+  assert.equal(admitted.checks.copyAccurate, false);
+  assert.deepEqual(admitted.reasons, evidence.reasons);
+  assert.equal(validateScreen({ ...evidence, quality: 79.9 }, evidence.mediaHash).passed, false);
+  assert.equal(validateScreen({ ...evidence, quality: 100, briefAlignment: 59.9 }, evidence.mediaHash).passed, false);
+  for (const key of ['productVisible', 'copyReadable', 'claimsSupported', 'noMajorDefects']) {
+    const blocked = validateScreen({ ...evidence, quality: 100, checks: { ...evidence.checks, [key]: false } }, evidence.mediaHash);
+    assert.equal(blocked.passed, false, key);
+    assert.equal(blocked.copyWarning, false, key);
+  }
+  const accurate = { ...evidence, quality: 60, checks: { ...evidence.checks, copyAccurate: true } };
+  assert.equal(validateScreen(accurate, evidence.mediaHash).passed, true);
+  assert.equal(validateScreen(accurate, evidence.mediaHash).copyWarning, false);
+  assert.equal(validateScreen({ ...accurate, quality: 59.9 }, evidence.mediaHash).passed, false);
+});
 
 test('the scoring contract retains the deployed worker and baseline identity', () => {
   // Captured from the production worker, before the product terminology rename.
@@ -164,7 +207,7 @@ test('invalid baseline, runtime, protocol and media results are rejected before 
   await assert.rejects(scoreTribe([one], brief), /checksum/);
 });
 
-test('review sees actual image pixels, fails wrong copy and caches by brief', async t => {
+test('review retains copy failures as warnings and reuses cached evidence under the current eligibility policy', async t => {
   await isolatedConfig(t);
   const item = { ...draft, ...(await candidate()) };
   let reviews = 0;
@@ -177,8 +220,23 @@ test('review sees actual image pixels, fails wrong copy and caches by brief', as
       checks: { productVisible: true, copyReadable: true, copyAccurate: false, claimsSupported: true, noMajorDefects: true },
       reasons: ['Wrong headline'], visualTags: ['product closeup', 'green'] }));
   });
-  assert.equal((await screenCandidate(item, brief)).passed, false);
-  assert.equal((await screenCandidate(item, brief)).cached, true);
+  const fresh = await screenCandidate(item, brief);
+  assert.equal(fresh.passed, true);
+  assert.equal(fresh.copyWarning, true);
+  assert.equal(fresh.checks.copyAccurate, false);
+  // An existing cache entry contains the old eligibility decision but the same
+  // reviewer evidence. Reclassify it without another paid review.
+  const cache = process.env.EVALUATION_CACHE_DIR;
+  const path = join(cache, (await readdir(cache)).find(name => name.startsWith('vision-')));
+  const legacy = JSON.parse(await readFile(path));
+  legacy.passed = false; delete legacy.copyWarning;
+  await writeFile(path, JSON.stringify(legacy));
+  const cached = await screenCandidate(item, brief);
+  assert.equal(cached.cached, true);
+  assert.equal(cached.passed, true);
+  assert.equal(cached.copyWarning, true);
+  assert.equal(cached.checks.copyAccurate, false);
+  assert.deepEqual(cached.reasons, ['Wrong headline']);
   assert.equal(reviews, 1);
   await screenCandidate(item, { ...brief, goal: 'Another goal' });
   assert.equal(reviews, 2);
