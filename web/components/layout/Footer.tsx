@@ -7,9 +7,11 @@ export default function Footer() {
       <div aria-hidden className="h-px w-full bg-linear-to-r from-transparent via-border to-transparent" />
       <div className="section-container flex flex-col gap-6 py-10 sm:flex-row sm:items-center sm:justify-between">
         <BrandMark />
-        <p className="max-w-[52ch] text-xs text-foreground-lighter">
-          A local prototype for evolving still-image ad drafts. Scores are design
-          priors, not measured emotion or predicted conversions.
+        <p className="max-w-[62ch] text-xs text-foreground-lighter">
+          Advolve evaluates creative against predicted cortical response, scored by
+          Percept and TRIBE against one fixed original baseline. Predictions are
+          parcel-averaged and directional. They are not measured emotion, recall or
+          conversion.
         </p>
       </div>
     </footer>
