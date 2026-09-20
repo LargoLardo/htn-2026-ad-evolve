@@ -29,6 +29,7 @@ export class RunDocument extends DurableObject {
       if (await this.read('run')) throw new Error('Run already exists.');
       await this.ctx.storage.put('accountId', accountId);
       run.workflowId = `e-${accountId.slice(0, 16)}-${run.id}`;
+      run.workflowPolicy = { seedancePollSeconds: 30 };
       await this.write('initial', run); await this.write('run', run);
       if (!terminal(run.status)) await this.ctx.storage.setAlarm(Date.now() + 1000);
       await indexRun(this.env, accountId, run);

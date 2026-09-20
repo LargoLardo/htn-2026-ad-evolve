@@ -3,10 +3,10 @@
 For the Cloudflare implementation and credential setup, start at
 [CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md). The hosted path now implements
 account-scoped storage, resumable round gates and optional per-round feedback.
-The hosted image pipeline and live media service are validated. Workers Paid
-activation is still needed to finish the hosted video test; see that document
-for current deployment status and timings. The Node path below continues to
-work locally.
+The hosted image and video runs and live media service are validated. Workers
+Paid activation is still needed for general production workloads; see that
+document for test coverage, limitations and timings. The Node path below
+continues to work locally.
 
 Start here. Two people can work in parallel from this point:
 

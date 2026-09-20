@@ -2,9 +2,10 @@ import { sha256, stable } from '../../lib/scoring-validation.mjs';
 
 const BASE = 'https://api.dev.pika.art';
 const MODEL = 'bytedance/seedance-2.0/text-to-video';
-export function createVideoProvider(env, media, store, { step, checkpoint } = {}) {
+export function createVideoProvider(env, media, store, { step, checkpoint, pollSeconds = 30 } = {}) {
   return async function renderVideo(prompt, brief) {
     if (!step) throw new Error('Video generation must run inside a Workflow.');
+    if (![5, 30].includes(pollSeconds)) throw new Error('Invalid saved video polling policy.');
     if (!env.PIKA_API_KEY) throw new Error('Video generation requires PIKA_API_KEY.');
     const body = { prompt, resolution: '720p', ratio: brief.aspectRatio, duration: brief.videoDuration };
     const idempotencyKey = sha256(stable([MODEL, body]));
@@ -25,7 +26,7 @@ export function createVideoProvider(env, media, store, { step, checkpoint } = {}
     if (job.asset) return { ...job.asset, cached: true };
     // Generation takes minutes. Frequent polling wastes provider requests and
     // Workflow steps without making the model finish sooner.
-    for (let attempt = 0; attempt < 30; attempt++) {
+    for (let attempt = 0; attempt < 900 / pollSeconds; attempt++) {
       const status = await step.do(`${key}-poll-${attempt}`, () => request(`/v1/media/jobs/${job.id}`));
       if (status.status === 'failed') throw new Error('Seedance video generation failed.');
       if (status.status === 'completed') {
@@ -47,7 +48,7 @@ export function createVideoProvider(env, media, store, { step, checkpoint } = {}
         });
       }
       if (!['queued', 'running'].includes(status.status)) throw new Error('Unknown Seedance job state.');
-      await step.sleep(`${key}-sleep-${attempt}`, '30 seconds');
+      await step.sleep(`${key}-sleep-${attempt}`, `${pollSeconds} seconds`);
     }
     throw new Error('Seedance generation exceeded 15 minutes; its job ID is retained.');
   };

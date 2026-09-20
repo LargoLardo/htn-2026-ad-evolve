@@ -61,6 +61,7 @@ it('runs the shared engine through a durable human gate and resumes after evicti
       await m.mockStepResult({ name: `score-1-${id(1)}-result` }, { baseline, calls: 1, results: [{ id: id(1), mediaHash: hash, neural: { source: 'tribe-percept', engagementScore: 50, baselineHash: baseline.hash, baselineMediaHash: hash, contractHash: contract.hash, provenance: 'TEST' } }] });
     });
     await doc.initialize(accountId, run);
+    expect((await doc.initial()).workflowPolicy).toEqual({ seedancePollSeconds: 30 });
     await runInDurableObject(doc, async (_, state) => { await state.storage.deleteAlarm(); await state.storage.put('started', true); });
     const instance = await env.EVOLUTION.create({ id: workflowId, params: { accountId, runId: run.id } });
     const gate = await test.waitForStepResult({ name: 'round-1-gate' });

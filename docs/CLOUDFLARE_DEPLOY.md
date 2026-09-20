@@ -8,7 +8,7 @@ Hosted app: https://advolve-web.advolve-logan.workers.dev (Cloudflare Access
 sign-in required). R2, D1, Queue, Workflows and the Baseten media service are
 provisioned. The API Worker is private.
 
-Validation on 2026-09-20: 43 Node tests, 15 Cloudflare runtime tests, 8 offline
+Validation on 2026-09-20: 43 Node tests, 16 Cloudflare runtime tests, 8 offline
 scoring/transport tests and 2 real FFmpeg media-service tests passed. Both
 Worker bundles build, including frontend TypeScript checks.
 
@@ -26,12 +26,20 @@ video frame/audio extraction took 1.8s. Remote Images masking was checked pixel
 by pixel: the specified rectangle is exactly gray and all outside pixels are
 unchanged. Full impact-map validation is in progress.
 
-The live Seedance run is paused with its paid job IDs saved. Workers Free hit
-its 50-external-subrequest limit while polling. Production now polls every
-30 seconds and explicitly budgets 10,000 subrequests, which requires **Workers
-Paid**. Cloudflare rejected that configuration on the current Free account;
-activate Workers Paid before deploying the updated API and resuming the run.
-Video generation through scoring is not yet fully validated on the hosted app.
+The one-round video run completed in **20m 5s**, including recovery from Free's
+50-external-subrequest limit. Existing Seedance job IDs were reused, with no
+duplicate generation. All three generated videos failed exact-copy review;
+the uploaded original passed, received a TRIBE score, and became the finalist.
+Export and baseline validation passed. Generated-video neural ranking was not
+exercised by this run. A generated 5.09s clip with audio separately passed
+hosted upload, playback and seeking.
+
+New runs poll Seedance every 30 seconds. The production configuration budgets
+10,000 subrequests and requires **Workers Paid**. Cloudflare rejected this
+limit on the current Free account. The compatible API fixes were deployed
+under the existing Free limits to recover the small tests; activate Workers
+Paid and redeploy before relying on larger or longer runs. The recovery does
+not establish that general production workloads fit Free.
 
 ## Put credentials here
 
@@ -160,6 +168,9 @@ package does not start local model downloads or any decoder training.
 - Workflow steps persist provider outputs. Render/review step names use the
   candidate ID so different parallel completion order cannot attach results
   to the wrong take during replay. Seedance job IDs are retained before polling.
+  Polling cadence is fixed in each run's initial document: existing runs retain
+  five-second sleeps and new runs use 30 seconds. Changing sleep duration can
+  change durable step identity, so it must not change while replaying a run.
   DO stubs are reacquired on every RPC so deployment resets do not poison
   subsequent retries. Resume saved instances; do not restart paid runs from zero.
 - Product labels say "neural", while the deployed scoring contract, source IDs,

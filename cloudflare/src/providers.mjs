@@ -4,10 +4,10 @@ import { getScoringContract } from './contract.mjs';
 import { accountStore } from './storage.mjs';
 import { createVideoProvider } from './video.mjs';
 
-export function cloudProviders(env, accountId, { step, checkpoint } = {}) {
+export function cloudProviders(env, accountId, { step, checkpoint, videoPollSeconds } = {}) {
   const media = createMedia(env, accountId), store = accountStore(env, accountId);
   return createProviders({ env, ...media, ...store, getScoringContract,
-    renderVideo: createVideoProvider(env, media, store, { step, checkpoint }),
+    renderVideo: createVideoProvider(env, media, store, { step, checkpoint, pollSeconds: videoPollSeconds }),
     async neuralRequest(endpoint, payload, { token, signal }) {
       if (payload.candidates.length !== 1) throw new Error('Neural requests must contain exactly one stimulus.');
       const item = payload.candidates[0];

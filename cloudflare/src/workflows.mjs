@@ -16,7 +16,10 @@ export class EvolutionWorkflow extends WorkflowEntrypoint {
     const run = await step.do('initial-run', () => doc().initial());
     if (!run) throw new Error('Run document not found.');
     const checkpoint = () => doc().assertActive();
-    const providers = cloudProviders(this.env, context.accountId, { step, checkpoint });
+    // Sleep duration participates in durable step identity. Existing runs retain
+    // their original cadence; newly initialized runs record the slower policy.
+    const providers = cloudProviders(this.env, context.accountId, { step, checkpoint,
+      videoPollSeconds: run.workflowPolicy?.seedancePollSeconds ?? 5 });
     const live = { ...providers };
     const calls = new Map(); let revision = 0;
     for (const name of ['research', 'generateConcepts', 'describeReferences', 'readImpactNotes', 'screenCandidate', 'renderCandidate']) {
