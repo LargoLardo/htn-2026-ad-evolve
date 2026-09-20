@@ -1,6 +1,10 @@
-torch==2.6.0
-torchvision==0.21.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
 numpy==2.2.6
 Pillow==11.3.0
 boltons==25.0.0
+einops==0.8.1
+# DeepGaze's package initializer also imports its CLIP feature extractor.
+clip @ git+https://github.com/openai/CLIP.git@d05afc436d78f1c48dc0dbf8e5980a9d471f35f6
 deepgaze-pytorch @ git+https://github.com/matthias-k/DeepGaze.git@c7db17e2d1d7ea6468ffdee2cfaddf141095dcff

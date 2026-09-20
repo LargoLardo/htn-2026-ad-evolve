@@ -17,14 +17,22 @@ Use the ignored **`.env.cloudflare` at the repository root** (mode 0600).
 Copy `cloudflare/.env.example` there only if it does not already exist.
 Never paste an API token into chat or commit it.
 
+For an interactive deployment, Wrangler's browser login can replace the API
+token. Run `node cloudflare/node_modules/wrangler/bin/wrangler.js login`, then
+append `--oauth` to the deployment script's `check`, `provision`, and `deploy`
+commands. The script obtains a refreshed token from Wrangler in memory; it does
+not print it or copy it into `.env.cloudflare`. This explicitly overrides a
+saved API token, which is useful if that token only has read permissions.
+
 1. `CLOUDFLARE_ACCOUNT_ID`: Cloudflare dashboard → account home → account ID.
 2. `CLOUDFLARE_API_TOKEN`: create a custom API token limited to that account.
    Grant **Workers Scripts Edit, Workers R2 Storage Edit, D1 Edit, Queues Edit,
    Images Edit, and Account Settings Read**. Workflows use Workers Scripts
    permission. If deploying a custom domain, also grant **Zone Read and
    Workers Routes Edit** for that zone. The UI may label Edit as Write.
-   Enable Workers Paid, R2 and Images transformations in the dashboard before
-   deployment. No R2 S3 access keys are needed.
+   Activate R2 in the dashboard before deployment. Worker execution and Images
+   transformations use the limits of your account's plans; upgrade those plans
+   if your usage requires it. No R2 S3 access keys are needed.
 3. `ACCESS_TEAM_DOMAIN`: Zero Trust team domain, e.g.
    `my-team.cloudflareaccess.com`, without `https://`.
 4. `ACCESS_AUD`: Application Audience (AUD) tag of a Cloudflare Access
@@ -49,6 +57,11 @@ expiry itself, so missing or invalid Access configuration fails closed.
 Each verified user has a separate account namespace; shared team tenancy is
 not yet implemented. Changing the Access issuer or user identity changes that
 namespace and requires an explicit history import.
+
+An authorized Cloudflare API MCP connection can create the Access application
+and policy and retrieve its AUD automatically. Wrangler remains responsible for
+the Worker bundles and database migrations. R2 must first be activated in the
+account's dashboard; API access alone does not activate the product.
 
 Token reference: [Cloudflare permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/).
 Worker roles: [Cloudflare authorization](https://developers.cloudflare.com/workers/authorization/).

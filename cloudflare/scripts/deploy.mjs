@@ -2,7 +2,8 @@ import { loadEnvFile } from 'node:process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 for (const filename of ['.env', '.env.cloudflare']) {
@@ -10,6 +11,21 @@ for (const filename of ['.env', '.env.cloudflare']) {
 }
 const mode = process.argv[2] || 'check';
 if (!['check', 'provision', 'deploy'].includes(mode)) throw new Error('Use check, provision or deploy.');
+const wrangler = resolve(root, 'cloudflare/node_modules/wrangler/bin/wrangler.js');
+if (process.argv.includes('--oauth')) {
+  // Ask Wrangler to refresh its own login. Keep the token in memory and out of
+  // logs and dotenv files; an explicitly selected login overrides a saved token.
+  const env = { ...process.env };
+  for (const key of ['CLOUDFLARE_API_TOKEN', 'CF_API_TOKEN', 'CLOUDFLARE_API_KEY', 'CF_API_KEY', 'CLOUDFLARE_EMAIL', 'CF_EMAIL']) env[key] = '';
+  let credentials;
+  try {
+    const { stdout } = await promisify(execFile)(process.execPath, [wrangler, 'auth', 'token', '--json'], { cwd: root, env, timeout: 60_000 });
+    credentials = JSON.parse(stdout);
+  } catch { throw new Error('Wrangler OAuth is unavailable. Run node cloudflare/node_modules/wrangler/bin/wrangler.js login, then retry with --oauth.'); }
+  if (credentials.type !== 'oauth' || !credentials.token) throw new Error('Expected a Wrangler OAuth login. Run Wrangler login, then retry with --oauth.');
+  process.env.CLOUDFLARE_API_TOKEN = credentials.token;
+  console.log('Using the Wrangler OAuth login.');
+}
 const required = ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', ...(mode === 'deploy' ? ['ACCESS_TEAM_DOMAIN', 'ACCESS_AUD'] : [])];
 const missing = required.filter(key => !process.env[key]);
 if (missing.length) { console.error(`Add ${missing.join(', ')} to .env.cloudflare. Values are never printed.`); process.exit(1); }
@@ -37,7 +53,6 @@ config.account_id = process.env.CLOUDFLARE_ACCOUNT_ID;
 config.d1_databases[0].database_id = database.uuid;
 const apiConfig = resolve(root, 'cloudflare/wrangler.deploy.json');
 await writeFile(apiConfig, JSON.stringify(config, null, 2) + '\n');
-const wrangler = resolve(root, 'cloudflare/node_modules/wrangler/bin/wrangler.js');
 async function command(args, { cwd = root, input } = {}) {
   await new Promise((yes, no) => {
     const child = spawn(process.execPath, args, { cwd, env: { ...process.env, PATH: `${dirname(process.execPath)}:${process.env.PATH}` }, stdio: ['pipe', 'inherit', 'inherit'] });

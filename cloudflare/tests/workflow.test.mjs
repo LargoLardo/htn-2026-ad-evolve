@@ -4,8 +4,38 @@ import { createRun, validateBrief } from '../../lib/evolution.mjs';
 import { sha256, stable } from '../../lib/scoring-validation.mjs';
 import { getScoringContract } from '../src/contract.mjs';
 import { runDocument } from '../src/storage.mjs';
+import { MapWorkflow } from '../src/workflows.mjs';
 
 beforeAll(() => applyD1Migrations(env.INDEX, env.MIGRATIONS));
+
+it('reconnects to the run document when a deployment reset poisons an RPC stub', async () => {
+  let reset = false, saved = false, connections = 0;
+  const bindings = { RUNS: {
+    idFromName: name => name,
+    get() {
+      connections++;
+      let broken = false;
+      return {
+        maps: async () => ({ targets: [] }),
+        get: async () => ({ brief: {} }),
+        async saveMaps() {
+          if (!reset || broken) {
+            reset = broken = true;
+            throw new Error('Durable Object reset because its code was updated.');
+          }
+          saved = true;
+        },
+      };
+    },
+  } };
+  const step = { async do(name, callback) {
+    try { return await callback(); }
+    catch { return callback(); }
+  } };
+  await MapWorkflow.prototype.run.call({ env: bindings }, { payload: { accountId: sha256('rpc-reset'), runId: crypto.randomUUID() }, instanceId: 'rpc-reset' }, step);
+  expect(saved).toBe(true);
+  expect(connections).toBeGreaterThan(1);
+});
 
 it('runs the shared engine through a durable human gate and resumes after eviction', async () => {
   const accountId = sha256('workflow-owner');
