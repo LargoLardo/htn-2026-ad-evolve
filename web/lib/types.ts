@@ -51,8 +51,9 @@ export interface MediaReview {
   quality: number;
   briefAlignment: number;
   passed: boolean;
-  /** Eligible on visual quality despite copy differences; original checks remain visible. */
+  /** Eligible on visual quality despite copy differences; missing words remain visible. */
   copyWarning?: boolean;
+  copyCheck?: { missingWords: string[]; reviewerCopyAccurate: boolean };
   observedText: string;
   transcript?: string;
   evidenceScope?: string;

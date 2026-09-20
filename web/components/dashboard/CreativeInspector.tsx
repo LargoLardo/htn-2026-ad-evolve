@@ -52,7 +52,8 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           <ScoreRow label="Quality" value={review.quality} /><ScoreRow label="Brief alignment" value={review.briefAlignment} />
           <p className="text-xs text-foreground-lighter">{review.copyWarning ? 'Eligible for neural scoring on visual quality. Copy differences still need review.' : review.passed ? 'Passed automated checks.' : 'Review checks failed.'} {review.evidenceScope === 'six-sampled-frames-and-audio-transcript' ? 'Video review uses six sampled frames and an audio transcript; it cannot assess every moment or motion smoothness.' : 'Still-image review.'}</p>
           <ul className="text-xs text-foreground-light">{Object.entries(review.checks).map(([name, passed]) => <li key={name}>{name.replace(/[A-Z]/g, c => ` ${c.toLowerCase()}`)}: {passed ? 'pass' : 'fail'}</li>)}</ul>
-          <p className="text-xs text-foreground-lighter">{review.reasons.join(' · ')}</p>
+          {review.copyCheck && <p className="text-xs text-foreground-lighter">{review.copyCheck.missingWords.length ? `Required words not found: ${review.copyCheck.missingWords.join(', ')}.` : 'Required words are present. Capitalization, punctuation, word order and extra text are allowed.'}</p>}
+          {review.reasons.length > 0 && <p className="text-xs text-foreground-lighter">Automated reviewer notes: {review.reasons.join(' · ')}</p>}
           <details className="text-xs text-foreground-light"><summary>Observed copy and transcript</summary><p className="mt-2">{review.observedText}</p><p>{review.transcript || 'No audio transcript.'}</p></details>
         </section>}
         {neural?.source === 'tribe-percept' && <section className="flex flex-col gap-3" aria-label="Neural scores">

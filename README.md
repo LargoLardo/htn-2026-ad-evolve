@@ -28,7 +28,7 @@ response, not validated emotion, engagement or conversion performance.
 Describe your product, and Advolve runs a full evolutionary loop over your ad creatives.
 
 - **Research and Concepting**: Researches your brief, generates concepts and renders a population of ad takes with an 8-gene genome (hook, visual, emotion, proof, CTA, palette, motion, audio).
-- **Automated Review**: Reviews actual pixels, copy, product visibility, claims and brief alignment. Takes with visual quality of at least 80/100 can enter the neural shortlist with copy warnings when their other checks pass and brief alignment is at least 60/100. Video review samples six frames and transcribes audio with Whisper.
+- **Automated Review**: Reviews actual pixels, copy, product visibility, claims and brief alignment. Copy passes when every required word appears in the visible text or audio transcript, ignoring capitalization, punctuation, spacing, order and repetition; extra text is allowed. Takes with visual quality of at least 80/100 can enter the neural shortlist with missing-copy warnings when their other checks pass and brief alignment is at least 60/100. Video review samples six frames and transcribes audio with Whisper.
 - **Neural Scoring**: Shortlisted takes are scored by TRIBE, a neuroscience model that predicts cortical response across four Glasser parcel families.
 - **Selection and Breeding**: Ranks takes by neural score, retains the winner, applies crossover and single-gene mutation to produce the next generation.
 - **Manual Gates (Cloudflare)**: Optionally pause between rounds to hand-pick parents, kill weak nodes and edit the brief before the next generation breeds. Local Node runs select parents automatically.

@@ -52,6 +52,49 @@ test('strong visual quality admits copy warnings while retaining other review re
   assert.equal(validateScreen({ ...accurate, quality: 59.9 }, evidence.mediaHash).passed, false);
 });
 
+test('copy review accepts required words across formatting, layout and audio without requiring high quality', () => {
+  const required = { headline: 'Your next idea', body: "Don't wait. Make space for a fresh idea.", cta: 'Discover Example' };
+  const evidence = { mediaHash: 'test-media', quality: 65, briefAlignment: 70,
+    observedText: 'DISCOVER EXAMPLE!\nYour NEXT idea… Make space for a fresh idea. Don’t wait!',
+    checks: { productVisible: true, copyReadable: true, copyAccurate: false, claimsSupported: true, noMajorDefects: true },
+    reasons: ['Capitalization differs'], visualTags: ['notebook'] };
+  for (const variant of [
+    {},
+    { observedText: 'EXAMPLE — DISCOVER / idea fresh a for space Make / wait dont / next YOUR / EXTRA WORDS' },
+    { observedText: 'Your next IDEA', transcript: 'Discover Example. Make space for a fresh idea. Dont wait.' },
+  ]) {
+    const result = validateScreen({ ...evidence, ...variant }, evidence.mediaHash, required);
+    assert.equal(result.passed, true);
+    assert.equal(result.copyWarning, false);
+    assert.equal(result.checks.copyAccurate, true);
+    assert.deepEqual(result.copyCheck.missingWords, []);
+    assert.equal(result.copyCheck.reviewerCopyAccurate, false);
+  }
+  assert.equal(evidence.checks.copyAccurate, false, 'preserve raw reviewer evidence');
+  assert.equal(validateScreen(evidence, evidence.mediaHash, null).checks.copyAccurate, false, 'originals keep internal accuracy review');
+  const blocked = validateScreen({ ...evidence, checks: { ...evidence.checks, claimsSupported: false } }, evidence.mediaHash, required);
+  assert.equal(blocked.checks.copyAccurate, true);
+  assert.equal(blocked.passed, false, 'word presence does not override other review checks');
+});
+
+test('copy review requires whole words and reports missing words even when the reviewer approves', () => {
+  const evidence = { mediaHash: 'test-media', quality: 70, briefAlignment: 80, observedText: 'Discover examples. A fresh notebook.',
+    checks: { productVisible: true, copyReadable: true, copyAccurate: true, claimsSupported: true, noMajorDefects: true },
+    reasons: [], visualTags: ['notebook'] };
+  const required = { headline: 'A fresh notebook', body: '', cta: 'Discover Example' };
+  const result = validateScreen(evidence, evidence.mediaHash, required);
+  assert.equal(result.checks.copyAccurate, false);
+  assert.deepEqual(result.copyCheck.missingWords, ['example']);
+  assert.equal(result.passed, false);
+  assert.equal(result.copyWarning, false);
+  const strong = validateScreen({ ...evidence, quality: 90 }, evidence.mediaHash, required);
+  assert.equal(strong.passed, true);
+  assert.equal(strong.copyWarning, true, 'the high-quality exception still applies to missing copy');
+  const unicode = validateScreen({ ...evidence, observedText: 'ＣＡＦÉ\nCOCA—COLA' }, evidence.mediaHash,
+    { headline: 'Cafe\u0301', body: 'Coca-Cola', cta: '' });
+  assert.equal(unicode.checks.copyAccurate, true);
+});
+
 test('the scoring contract retains the deployed worker and baseline identity', () => {
   // Captured from the production worker, before the product terminology rename.
   assert.equal(contract.hash, 'd5051effb6cc82842c7c7f8dbf21f7ea7854c57284b7e1cf46d8a86e2eba6576');
@@ -242,6 +285,34 @@ test('review retains copy failures as warnings and reuses cached evidence under 
   assert.equal(reviews, 2);
 });
 
+test('fresh and legacy cached reviews accept formatting changes using the required copy', async t => {
+  await isolatedConfig(t);
+  const item = { ...draft, ...(await candidate()) };
+  let reviews = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    reviews++;
+    return Response.json(openaiResponse({ quality: 70, briefAlignment: 80,
+      observedText: 'YOUR NEXT IDEA!\nMake space for a fresh idea..\nDISCOVER EXAMPLE. Extra copy.',
+      checks: { productVisible: true, copyReadable: true, copyAccurate: false, claimsSupported: true, noMajorDefects: true },
+      reasons: ['CTA capitalization differs'], visualTags: ['notebook'] }));
+  });
+  const fresh = await screenCandidate(item, brief);
+  assert.equal(fresh.passed, true);
+  assert.equal(fresh.checks.copyAccurate, true);
+  assert.equal(fresh.copyWarning, false);
+  const cache = process.env.EVALUATION_CACHE_DIR;
+  const path = join(cache, (await readdir(cache)).find(name => name.startsWith('vision-')));
+  const legacy = JSON.parse(await readFile(path));
+  legacy.passed = false; legacy.checks.copyAccurate = false; delete legacy.copyCheck;
+  await writeFile(path, JSON.stringify(legacy));
+  const cached = await screenCandidate(item, brief);
+  assert.equal(cached.cached, true);
+  assert.equal(cached.passed, true);
+  assert.equal(cached.checks.copyAccurate, true);
+  assert.equal(cached.copyWarning, false);
+  assert.equal(reviews, 1, 'reuse the persisted OCR without another review');
+});
+
 test('video review provides six sampled frames plus a multipart audio transcript', async t => {
   await isolatedConfig(t);
   const item = { ...draft, ...(await candidate('video', 'sample.mp4')), original: true };
@@ -266,6 +337,22 @@ test('video review provides six sampled frames plus a multipart audio transcript
   assert.equal(result.transcript, 'Meet Example.');
   await screenCandidate(item, brief);
   assert.equal(transcriptions, 1);
+});
+
+test('video copy can be distributed between visible text and speech', async t => {
+  await isolatedConfig(t);
+  const item = { ...draft, ...(await candidate('video', 'sample.mp4')), headline: 'Meet Example', body: 'A fresh idea', cta: 'Discover Example' };
+  t.mock.method(globalThis, 'fetch', async url => {
+    if (url.endsWith('/audio/transcriptions')) return Response.json({ text: 'MEET Example! Discover Example.' });
+    return Response.json(openaiResponse({ quality: 70, briefAlignment: 80, observedText: 'A FRESH IDEA.',
+      checks: { productVisible: true, copyReadable: true, copyAccurate: false, claimsSupported: true, noMajorDefects: true },
+      reasons: ['Copy split between frames and audio'], visualTags: ['notebook'] }));
+  });
+  const result = await screenCandidate(item, brief);
+  assert.equal(result.passed, true);
+  assert.equal(result.copyWarning, false);
+  assert.equal(result.checks.copyAccurate, true);
+  assert.deepEqual(result.copyCheck.missingWords, []);
 });
 
 test('cancellation prevents provider calls', async t => {
