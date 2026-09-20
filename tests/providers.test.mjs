@@ -9,6 +9,13 @@ import { baselineFor, candidate, contract, fixture, isolatedConfig, openaiRespon
 const brief = { product: 'Example', description: 'A reusable notebook', audience: 'Designers', goal: 'Discovery', mode: 'live', population: 1, mediaType: 'image' };
 const draft = { id: 'candidate-1', round: 1, genome: { hook: 'question', visual: 'A notebook on a desk', emotion: 'curiosity', proof: 'Show the notebook', cta: 'Discover', palette: 'sage', motion: 'reveal', audio: 'quiet voice' }, headline: 'Your next idea', body: 'Make space for a fresh idea.', cta: 'Discover Example' };
 
+test('the scoring contract retains the deployed worker and baseline identity', () => {
+  // Captured from the production worker, before the product terminology rename.
+  assert.equal(contract.hash, 'd5051effb6cc82842c7c7f8dbf21f7ea7854c57284b7e1cf46d8a86e2eba6576');
+  assert.equal(contract.version, 'percept-glasser-000f26d-v1');
+  assert.equal(contract.percept_revision, '000f26d529e0b87b2478142bd8b5ebf40e44e313');
+});
+
 test('live research requires search and ties evidence to actual returned sources', async t => {
   await isolatedConfig(t);
   t.mock.method(globalThis, 'fetch', async (_url, options) => {
@@ -54,7 +61,7 @@ test('image generation supplies actual pixels and scores persist across IDs', as
     if (url.includes('/images/generations')) return Response.json({ data: [{ b64_json: (await fixture('red.png')).toString('base64') }] });
     calls++;
     const body = JSON.parse(options.body);
-    assert.equal(body.action, 'neural');
+    assert.equal(body.action, 'percept');
     assert.equal(body.contract_hash, contract.hash);
     assert.equal(body.candidates[0].media_type, 'image');
     return Response.json(scoreResponse(body));
@@ -67,7 +74,7 @@ test('image generation supplies actual pixels and scores persist across IDs', as
   assert.deepEqual(second.results[0].neural, first.results[0].neural);
   assert.equal(second.results[0].cached, true);
   assert.equal(third.results[0].cached, true);
-  assert.equal(first.results[0].neural.source, 'tribe-neural');
+  assert.equal(first.results[0].neural.source, 'tribe-percept');
   await assert.rejects(scoreTribe([{ ...draft, asset: { ...asset, mediaHash: 'wrong' } }], brief), /hash mismatch/);
   await assert.rejects(scoreTribe([{ ...draft, asset: { url: '/assets/../../secret.png' } }], brief), /actual PNG or MP4/);
 });

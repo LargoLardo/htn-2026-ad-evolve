@@ -1,6 +1,6 @@
 import type { Candidate, Run } from './types';
 
-export const hasNeural = (candidate: Candidate) => candidate.scores?.neural?.source === 'tribe-neural';
+export const hasNeural = (candidate: Candidate) => candidate.scores?.neural?.source === 'tribe-percept';
 
 export const selectionScore = (candidate: Candidate) =>
   hasNeural(candidate) ? candidate.scores!.neural!.engagementScore : candidate.scores?.fitness;
@@ -65,7 +65,7 @@ export function nodeScoreBar(candidate: Candidate): { score: number; percent: nu
 export const scoreLabel = (candidate: Candidate) => hasNeural(candidate)
   ? 'Neural vs original' : candidate.scores?.review ? 'Media review only' : 'Historical score';
 
-export const isNeural = (run: Run) => run.neuralConfig?.version?.startsWith('neural-') || run.rounds.some(r => r.candidates.some(c => c.scores?.source === 'tribe-neural'));
+export const isNeural = (run: Run) => run.neuralConfig?.version?.startsWith('percept-') || run.rounds.some(r => r.candidates.some(c => c.scores?.source === 'tribe-percept'));
 
 /**
  * Mirrors compareCandidates in lib/evolution.mjs: separate tiers, never a

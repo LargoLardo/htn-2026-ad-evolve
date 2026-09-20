@@ -47,7 +47,7 @@ test('upload, video seeking, original baseline and evolutionary API flow work to
         baseline = { hash: 'baseline', mediaHash: originalHash, contractHash: 'contract' };
       } else assert.deepEqual(options.baseline, baseline);
       return { baseline, calls: 1, results: candidates.map(c => ({ id: c.id, mediaHash: c.asset.mediaHash,
-        neural: { source: 'tribe-neural', engagementScore: c.original ? 50 : 70, baselineHash: baseline.hash, baselineMediaHash: originalHash, contractHash: 'contract', provenance: 'TEST' } })) };
+        neural: { source: 'tribe-percept', engagementScore: c.original ? 50 : 70, baselineHash: baseline.hash, baselineMediaHash: originalHash, contractHash: 'contract', provenance: 'TEST' } })) };
     },
   };
   const server = await createAppServer({ providers, dataDir: join(dir, 'runs') });

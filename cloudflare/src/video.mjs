@@ -23,7 +23,9 @@ export function createVideoProvider(env, media, store, { step, checkpoint } = {}
       await store.saveCachedJson(key, { id: created.id }); return { id: created.id };
     });
     if (job.asset) return { ...job.asset, cached: true };
-    for (let attempt = 0; attempt < 180; attempt++) {
+    // Generation takes minutes. Frequent polling wastes provider requests and
+    // Workflow steps without making the model finish sooner.
+    for (let attempt = 0; attempt < 30; attempt++) {
       const status = await step.do(`${key}-poll-${attempt}`, () => request(`/v1/media/jobs/${job.id}`));
       if (status.status === 'failed') throw new Error('Seedance video generation failed.');
       if (status.status === 'completed') {
@@ -45,7 +47,7 @@ export function createVideoProvider(env, media, store, { step, checkpoint } = {}
         });
       }
       if (!['queued', 'running'].includes(status.status)) throw new Error('Unknown Seedance job state.');
-      await step.sleep(`${key}-sleep-${attempt}`, '5 seconds');
+      await step.sleep(`${key}-sleep-${attempt}`, '30 seconds');
     }
     throw new Error('Seedance generation exceeded 15 minutes; its job ID is retained.');
   };

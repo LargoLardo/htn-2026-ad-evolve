@@ -98,7 +98,7 @@ class Model:
         tribe_worker.REVISION = self.spec["model_revision"]
         tribe_worker.CODE_REVISION = self.spec["code_revision"]
         print("Loading TRIBE checkpoint onto GPU...", flush=True)
-        tribe_worker.MODEL = TribeModel.from_pretrained(checkpoint, cache_folder=str(cache / "neural-features-v1"),
+        tribe_worker.MODEL = TribeModel.from_pretrained(checkpoint, cache_folder=str(cache / "percept-features-v1"),
             device="cuda", config_update=config_update)
         import neuralset.extractors.video as video_extractors
         self.clip_cache_stats = {"hits": 0, "misses": 0, "verification_forwards": 0}
@@ -117,10 +117,10 @@ class Model:
         action = model_input.get("action", "features")
         if action == "health":
             return {"feature_spec_hash": self.feature_spec_hash,
-                "neural_contract_hash": self.neural_contract_hash, "neural_version": self.neural_spec['version'],
+                "percept_contract_hash": self.neural_contract_hash, "percept_version": self.neural_spec['version'],
                 "labels": ["valence", "arousal"], "decoder_version": self.decoder.metadata["version"] if self.decoder else None,
                 "runtime_versions": getattr(self, "runtime_versions", {}), "model_loaded": tribe_worker.MODEL is not None}
-        if action == "neural":
+        if action in ["percept", "neural"]:
             if tribe_worker.MODEL is None:
                 raise RuntimeError("TRIBE model is not loaded.")
             with self.lock:

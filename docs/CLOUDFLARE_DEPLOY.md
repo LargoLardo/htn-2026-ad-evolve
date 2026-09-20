@@ -4,12 +4,34 @@ The implementation is in `cloudflare/`; Node local development still works.
 The Next app builds with OpenNext. Its Worker forwards API, SSE and media
 requests to a private API Worker through a service binding.
 
-Local validation on 2026-09-20: 42 Node tests, 13 Cloudflare runtime tests,
-and 2 real FFmpeg media-service tests passed. Both Worker bundles build.
-A browser smoke test exercised the manual gate (including an empty selection),
-and real local service bindings handled image upload and R2 asset retrieval.
-No paid model calls were made during these migration tests. Remote Images
-masking and a full hosted image/video run still require deployment validation.
+Hosted app: https://advolve-web.advolve-logan.workers.dev (Cloudflare Access
+sign-in required). R2, D1, Queue, Workflows and the Baseten media service are
+provisioned. The API Worker is private.
+
+Validation on 2026-09-20: 43 Node tests, 15 Cloudflare runtime tests, 8 offline
+scoring/transport tests and 2 real FFmpeg media-service tests passed. Both
+Worker bundles build, including frontend TypeScript checks.
+
+The live two-round image run completed in **19m 52s**, including about 4m 28s
+of deployment recovery and the manual selection wait. It generated six new
+images, reviewed seven assets, and kept one original baseline across both
+rounds. Reload preserved the gate, an empty selection returned 400, and the
+saved decision resumed breeding. Lineage, finalists, export and browser
+rendering passed. This is an observed integration-test duration, not a clean
+performance benchmark.
+
+Live upload took 4.0s for the image and 5.1s for the video; a video range request
+returned 206 with the correct bytes. DeepGaze attention took 2.9s after startup;
+video frame/audio extraction took 1.8s. Remote Images masking was checked pixel
+by pixel: the specified rectangle is exactly gray and all outside pixels are
+unchanged. Full impact-map validation is in progress.
+
+The live Seedance run is paused with its paid job IDs saved. Workers Free hit
+its 50-external-subrequest limit while polling. Production now polls every
+30 seconds and explicitly budgets 10,000 subrequests, which requires **Workers
+Paid**. Cloudflare rejected that configuration on the current Free account;
+activate Workers Paid before deploying the updated API and resuming the run.
+Video generation through scoring is not yet fully validated on the hosted app.
 
 ## Put credentials here
 
@@ -30,9 +52,9 @@ saved API token, which is useful if that token only has read permissions.
    Images Edit, and Account Settings Read**. Workflows use Workers Scripts
    permission. If deploying a custom domain, also grant **Zone Read and
    Workers Routes Edit** for that zone. The UI may label Edit as Write.
-   Activate R2 in the dashboard before deployment. Worker execution and Images
-   transformations use the limits of your account's plans; upgrade those plans
-   if your usage requires it. No R2 S3 access keys are needed.
+   Activate R2 and Workers Paid in the dashboard before production deployment.
+   Long video workflows need more than Free's 50 external subrequests. Images
+   transformations use the account's Images limits. No R2 S3 access keys are needed.
 3. `ACCESS_TEAM_DOMAIN`: Zero Trust team domain, e.g.
    `my-team.cloudflareaccess.com`, without `https://`.
 4. `ACCESS_AUD`: Application Audience (AUD) tag of a Cloudflare Access
@@ -120,6 +142,10 @@ package does not start local model downloads or any decoder training.
 
 ## Runtime and limits
 
+- Workers Paid is required by the production `limits.subrequests=10000`
+  configuration. The Free plan rejected a real three-video round at 50
+  external requests; retrying the exhausted invocation did not recover it.
+  See [Workflow limits](https://developers.cloudflare.com/workflows/reference/limits/).
 - D1 is an account-filtered run/map index; full run documents live in SQLite
   Durable Objects, with chunked storage for large score histories.
 - R2 keys start with the authenticated account ID. Media, evaluation caches,
@@ -134,6 +160,13 @@ package does not start local model downloads or any decoder training.
 - Workflow steps persist provider outputs. Render/review step names use the
   candidate ID so different parallel completion order cannot attach results
   to the wrong take during replay. Seedance job IDs are retained before polling.
+  DO stubs are reacquired on every RPC so deployment resets do not poison
+  subsequent retries. Resume saved instances; do not restart paid runs from zero.
+- Product labels say "neural", while the deployed scoring contract, source IDs,
+  request action, cache namespaces and `advolve-percept` Queue remain pinned.
+  Renaming these is a protocol migration: it invalidates existing baselines and
+  can leave sleeping workflows waiting for the wrong event. The contract hash
+  is covered by a regression test against the live deployment.
 - Manual selection waits natively for an event, up to 30 days. Decisions are
   saved before notification, idempotent, and must retain 1–4 valid parents.
   Only breeding waits; the preceding round has finished scoring.

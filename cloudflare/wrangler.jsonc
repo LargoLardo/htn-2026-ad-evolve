@@ -6,6 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "observability": { "enabled": true },
+  "limits": { "subrequests": 10000 },
   "vars": { "AUTH_MODE": "access", "TRIBE_CONCURRENCY": "1" },
   "durable_objects": { "bindings": [{ "name": "RUNS", "class_name": "RunDocument" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RunDocument"] }],
@@ -17,8 +18,8 @@
     { "binding": "MAP_BUILD", "name": "advolve-maps", "class_name": "MapWorkflow" }
   ],
   "queues": {
-    "producers": [{ "binding": "NEURAL", "queue": "advolve-neural" }],
-    "consumers": [{ "queue": "advolve-neural", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 8, "retry_delay": 30 }]
+    "producers": [{ "binding": "PERCEPT", "queue": "advolve-percept" }],
+    "consumers": [{ "queue": "advolve-percept", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 8, "retry_delay": 30 }]
   },
   "rules": [{ "type": "Text", "globs": ["**/neural_spec.json"], "fallthrough": true }]
 }

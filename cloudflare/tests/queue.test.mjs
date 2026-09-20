@@ -16,8 +16,8 @@ function scoreResponse(body) {
   const metadata = { mediaHash: body.candidates[0].media_hash, predictionHash: sha256('prediction'), contractHash: contract.hash, runtimeVersions: runtime, statsSha256: sha256(stats) };
   const baseline = body.baseline || { ...metadata, hash: sha256(stable(metadata)), statsF64: stats.toString('base64') };
   return { contract_hash: contract.hash, baseline, results: body.candidates.map(c => ({ id: c.id, media_hash: c.media_hash,
-    neural: { source: 'tribe-neural', version: contract.version, contractHash: contract.hash, baselineHash: baseline.hash, baselineMediaHash: baseline.mediaHash, engagementScore: 50, frames: 2, duration: 10, regions: FAMILY_KEYS.map(key => ({ key, name: key, score: 50, values: [45, 55] })), global: [45, 55], provenance: 'TEST' },
-    metadata: { runtime_versions: runtime, protocol: contract.protocol, neural_revision: contract.neural_revision, prediction_hash: sha256('prediction') } })) };
+    neural: { source: 'tribe-percept', version: contract.version, contractHash: contract.hash, baselineHash: baseline.hash, baselineMediaHash: baseline.mediaHash, engagementScore: 50, frames: 2, duration: 10, regions: FAMILY_KEYS.map(key => ({ key, name: key, score: 50, values: [45, 55] })), global: [45, 55], provenance: 'TEST' },
+    metadata: { runtime_versions: runtime, protocol: contract.protocol, percept_revision: contract.percept_revision, prediction_hash: sha256('prediction') } })) };
 }
 async function setup() {
   const accountId = sha256(crypto.randomUUID()), store = accountStore(env, accountId);
@@ -39,6 +39,7 @@ it('streams one stimulus, validates its baseline and reuses saved results on red
   const inference = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
     const payload = await new Response(init.body).json();
     expect(payload.candidates).toHaveLength(1);
+    expect(payload.action).toBe('percept');
     expect(Buffer.from(payload.candidates[0].media_base64, 'base64')).toEqual(bytes);
     return Response.json(scoreResponse(payload));
   });

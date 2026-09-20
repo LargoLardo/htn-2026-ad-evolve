@@ -85,7 +85,7 @@ class ScoringTests(unittest.TestCase):
         runtime = {'test': 'v1'}
         key = hashlib.sha256(json.dumps([item['media_hash'], 'video', 'contract', runtime], sort_keys=True).encode()).hexdigest()
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'neural' / f'{key}.npz'
+            path = Path(tmp) / 'percept' / f'{key}.npz'
             path.parent.mkdir()
             np.savez(path, predictions=np.ones((12, 20484)), tr=1)
             values, tr, cached = worker.extract_media(item, None, Path(tmp), 'contract', runtime)

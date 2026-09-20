@@ -2,8 +2,10 @@
 
 The migration is implemented in `cloudflare/`, with deployment instructions in
 [CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md). Local runtime tests and OpenNext
-builds pass; live deployment awaits account credentials and the separate
-Baseten media service. The design below records the original porting rationale.
+builds pass; the hosted image flow and separate Baseten media service are live.
+See the deployment document for validation results and the Workers Paid
+requirement for long video workflows. The design below records the original
+porting rationale.
 
 Current implementation:
 
@@ -19,8 +21,8 @@ Current implementation:
 
 Local tests cover account/JWT isolation, image ingestion, ranges, chunked state,
 Queue redelivery, replica readiness and a two-round Workflow pause/resume.
-They use mocked paid responses; real Images masking and hosted GPU inference
-still need a deployment smoke test.
+They use mocked paid responses. Hosted image generation, GPU inference, the
+human gate and pixel-exact Images masking have also passed live checks.
 
 ## What the thing actually is today
 
@@ -84,7 +86,7 @@ Browser
 Worker (Hono or plain fetch handler)          <- API, SSE, auth
   |-- R2            advolve-assets            <- PNG/MP4 bytes by sha256
   |-- D1 or DO      run documents             <- see "state" below
-  |-- Queue         advolve-neural           <- one message per stimulus
+  |-- Queue         advolve-percept          <- one message per stimulus
   |-- Workflow      map-build, evolution-run  <- durable multi step jobs
   |-- Images        binding                   <- replaces FFmpeg drawbox/scale
   `-- fetch         Baseten (TRIBE + DeepGaze), OpenAI

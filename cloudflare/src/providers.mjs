@@ -14,7 +14,7 @@ export function cloudProviders(env, accountId, { step, checkpoint } = {}) {
       if (!item.media_key.startsWith(`${accountId}/`)) throw new Error('Media account mismatch.');
       const object = await env.MEDIA.get(item.media_key);
       if (!object) throw new Error('Media not found.');
-      const prefix = JSON.stringify({ action: 'neural', contract_hash: payload.contract_hash, baseline: payload.baseline }).slice(0, -1)
+      const prefix = JSON.stringify({ action: 'percept', contract_hash: payload.contract_hash, baseline: payload.baseline }).slice(0, -1)
         + ',"candidates":[' + JSON.stringify({ id: item.id, media_hash: item.media_hash, media_type: item.media_type }).slice(0, -1) + ',"media_base64":"';
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: base64JsonStream(object.body, prefix, '"}]}'),

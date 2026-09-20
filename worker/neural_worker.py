@@ -67,7 +67,7 @@ def extract_media(candidate, model, cache, contract_hash, runtime):
     if digest != candidate.get('media_hash'):
         raise ValueError('Media hash mismatch.')
     key = hashlib.sha256(json.dumps([digest, media_type, contract_hash, runtime], sort_keys=True).encode()).hexdigest()
-    path = Path(cache) / 'neural' / f'{key}.npz'
+    path = Path(cache) / 'percept' / f'{key}.npz'
     if path.exists():
         with np.load(path, allow_pickle=False) as saved:
             predictions = checked_predictions(saved['predictions'])
@@ -122,10 +122,10 @@ def score_batch(request, model, cache, runtime):
             reference = decode_reference(baseline, contract_hash, runtime)
         score = summarize(predictions, reference, tr=tr)
         score.update(parcels=parcel_traces(predictions, reference),
-            source='tribe-neural', contractHash=contract_hash, version=spec['version'],
+            source='tribe-percept', contractHash=contract_hash, version=spec['version'],
             baselineHash=baseline['hash'], baselineMediaHash=baseline['mediaHash'], confidence=None,
             provenance='Neural scoring: original-media temporal z scores, bilateral Glasser parcel means, four equally weighted families. Predicted cortical response; not a validated emotion or conversion score.')
         results.append(dict(id=candidate['id'], media_hash=candidate['media_hash'], neural=score,
             metadata=dict(runtime_versions=runtime, prediction_hash=prediction_hash, cached=cached,
-                protocol=spec['protocol'], neural_revision=spec['neural_revision'])))
+                protocol=spec['protocol'], percept_revision=spec['percept_revision'])))
     return dict(contract_hash=contract_hash, baseline=baseline, results=results)

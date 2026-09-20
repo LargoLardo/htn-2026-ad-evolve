@@ -47,7 +47,7 @@ const database = databases.find(db => db.name === 'advolve-index') || await api(
 const buckets = await api('/r2/buckets');
 if (!buckets.buckets.some(bucket => bucket.name === 'advolve-assets')) await api('/r2/buckets', 'POST', { name: 'advolve-assets' });
 const queues = await api('/queues?per_page=100');
-if (!queues.some(queue => queue.queue_name === 'advolve-neural')) await api('/queues', 'POST', { queue_name: 'advolve-neural' });
+if (!queues.some(queue => queue.queue_name === 'advolve-percept')) await api('/queues', 'POST', { queue_name: 'advolve-percept' });
 const config = JSON.parse(await readFile(resolve(root, 'cloudflare/wrangler.jsonc'), 'utf8'));
 config.account_id = process.env.CLOUDFLARE_ACCOUNT_ID;
 config.d1_databases[0].database_id = database.uuid;
@@ -65,7 +65,7 @@ console.log('R2, D1, Queue and account-scoped schema are ready.');
 if (mode === 'provision') process.exit(0);
 if (!/^[a-z0-9-]+\.cloudflareaccess\.com$/.test(process.env.ACCESS_TEAM_DOMAIN)) throw new Error('ACCESS_TEAM_DOMAIN must be your-team.cloudflareaccess.com.');
 await command([wrangler, 'deploy', '--config', apiConfig]);
-const names = ['ACCESS_TEAM_DOMAIN', 'ACCESS_AUD', 'OPENAI_API_KEY', 'OPENAI_TEXT_MODEL', 'OPENAI_IMAGE_MODEL', 'OPENAI_SCREEN_MODEL', 'PIKA_API_KEY', 'BASETEN_API_KEY', 'BASETEN_TRIBE_ENDPOINT', 'TRIBE_SCORE_URL', 'TRIBE_SCORE_TOKEN', 'MEDIA_SERVICE_URL', 'MEDIA_SERVICE_TOKEN'];
+const names = ['ACCESS_TEAM_DOMAIN', 'ACCESS_AUD', 'OPENAI_API_KEY', 'OPENAI_TEXT_MODEL', 'OPENAI_IMAGE_MODEL', 'OPENAI_SCREEN_MODEL', 'PIKA_API_KEY', 'BASETEN_API_KEY', 'BASETEN_TRIBE_ENDPOINT', 'TRIBE_SCORE_URL', 'TRIBE_TOKEN', 'MEDIA_SERVICE_URL', 'MEDIA_SERVICE_TOKEN'];
 const secrets = Object.fromEntries(names.filter(key => process.env[key]).map(key => [key, process.env[key]]));
 await command([wrangler, 'secret', 'bulk', '--config', apiConfig], { input: JSON.stringify(secrets) });
 const web = JSON.parse(await readFile(resolve(root, 'web/wrangler.jsonc'), 'utf8'));

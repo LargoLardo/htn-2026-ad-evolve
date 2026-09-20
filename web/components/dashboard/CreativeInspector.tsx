@@ -33,7 +33,7 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           <MediaPreview asset={candidate.asset} title={candidate.headline} className="w-full rounded-lg border border-border" />
           <a href={src} download={`${slug}-${candidate.id}.${src.split('.').at(-1)}`} className="focus-ring inline-flex items-center justify-center gap-2 rounded-md border border-border-button bg-surface-100 px-4 py-2 text-sm text-foreground transition-colors hover:bg-surface-200"><Download size={14} /> Download draft</a>
         </> : <p className="text-sm text-foreground-lighter">No media is available yet.</p>}
-        <p className="text-xs text-foreground-lighter">{neural?.source === 'tribe-neural' ? 'TRIBE evaluated this media using neural scoring.' : review ? 'Automated media review is available below.' : 'No neural evaluation has been recorded.'}</p>
+        <p className="text-xs text-foreground-lighter">{neural?.source === 'tribe-percept' ? 'TRIBE evaluated this media using neural scoring.' : review ? 'Automated media review is available below.' : 'No neural evaluation has been recorded.'}</p>
       </div>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
@@ -55,7 +55,7 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           <p className="text-xs text-foreground-lighter">{review.reasons.join(' · ')}</p>
           <details className="text-xs text-foreground-light"><summary>Observed copy and transcript</summary><p className="mt-2">{review.observedText}</p><p>{review.transcript || 'No audio transcript.'}</p></details>
         </section>}
-        {neural?.source === 'tribe-neural' && <section className="flex flex-col gap-3" aria-label="Neural scores">
+        {neural?.source === 'tribe-percept' && <section className="flex flex-col gap-3" aria-label="Neural scores">
           <h3 className="label">Neural overall · {score(neural.engagementScore)} / 100</h3>
           <p className="text-xs text-foreground-lighter">Original: {originalLabel || 'first shortlisted creative'}. Every take uses the same baseline.</p>
           {neural.regions?.map(region => <div key={region.key}>
@@ -67,7 +67,7 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           </div>)}
           <p className="text-xs text-foreground-lighter">Four equally weighted Glasser families. 50 is the zero-z midpoint. Predicted cortical response is not validated emotion or ad effectiveness. {neural.provenance}</p>
         </section>}
-        {!review && neural?.source !== 'tribe-neural' && <p className="text-xs text-foreground-lighter">Historical scores remain in the run export.</p>}
+        {!review && neural?.source !== 'tribe-percept' && <p className="text-xs text-foreground-lighter">Historical scores remain in the run export.</p>}
         <div><h3 className="label">Where this came from</h3><p className="text-xs text-foreground-lighter">Round {candidate.round} · {candidate.mutation}<br />{candidate.parents.length ? `Parent nodes: ${candidate.parents.join(', ')}` : 'Initial population'}</p></div>
         {candidate.asset?.prompt && <details className="text-xs"><summary className="focus-ring cursor-pointer text-foreground-light">Render prompt</summary><p className="mt-2 text-foreground-lighter">{candidate.asset.prompt}</p></details>}
       </div>
