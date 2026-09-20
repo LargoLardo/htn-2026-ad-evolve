@@ -8,6 +8,11 @@ __pycache__/
 .venv/
 *.log
 artifacts/
+**/.wrangler/
+/cloudflare/dist/
+/web/.open-next/
+**/.dev.vars
+**/wrangler.deploy.json
 shared-conversation*
 /deploy/baseten/data/
 .venv-maps/

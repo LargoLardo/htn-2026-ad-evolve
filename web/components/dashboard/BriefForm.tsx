@@ -87,6 +87,7 @@ export default function BriefForm({
       videoDuration: Number(data.get('videoDuration') || 10),
       aspectRatio: (data.get('aspectRatio') || '9:16') as Brief['aspectRatio'],
       originalMediaId: original?.id ?? null,
+      ...(config?.durableRuns ? { selectionPolicy: data.get('selectionPolicy') === 'manual' ? 'manual' : 'auto', feedbackEveryRound: data.get('feedbackEveryRound') === 'on' } : {}),
     };
 
     setSubmitting(true);
@@ -294,6 +295,17 @@ export default function BriefForm({
           <span className="transition-transform group-open:rotate-45">+</span>
         </summary>
         <div className="mt-3 flex flex-col gap-3">
+          {config?.durableRuns && <>
+            <label htmlFor={`${uid}-selection`} className="text-sm text-foreground-light">Choose parents between rounds</label>
+            <select id={`${uid}-selection`} name="selectionPolicy" defaultValue={initial?.selectionPolicy ?? 'auto'} disabled={locked} className={field}>
+              <option value="auto">Automatically by neural score</option>
+              <option value="manual">Pause for my selection</option>
+            </select>
+            {config.attentionMaps && mediaType === 'image' && <label className="flex items-start gap-2 text-sm text-foreground-light">
+              <input type="checkbox" name="feedbackEveryRound" defaultChecked={initial?.feedbackEveryRound} disabled={locked} />
+              Measure each round’s winner before breeding. Adds an attention and impact map, with extra inference time and cost.
+            </label>}
+          </>}
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${uid}-seed`} className="text-sm text-foreground-light">
               Seed

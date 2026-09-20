@@ -6,6 +6,7 @@ import { Download } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import CreativeInspector from './CreativeInspector';
+import RoundGate from './RoundGate';
 import LineageTree from './LineageTree';
 import { assetLink, exportHref, safeLink } from '@/lib/api';
 import { type Candidate, type Run, type RunStage } from '@/lib/types';
@@ -21,6 +22,7 @@ const STAGE_TEXT: Record<RunStage, string> = {
   rendering: 'Rendering the shortlist…',
   scoring: 'Scoring rendered candidates…',
   evolving: 'Recombining and mutating…',
+  'awaiting-selection': 'Choose the parents for the next round.',
   finalizing: 'Selecting finalists…',
   complete: 'Run complete.',
   cancelled: 'Run cancelled.',
@@ -168,6 +170,8 @@ export default function RunWorkspace({
           ))}
         </dl>
       </div>
+
+      {run.gate && run.gate.status !== 'resolved' && running && <RoundGate key={run.gate.token} run={run} gate={run.gate} />}
 
       <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
         {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative, where 50 is parity with it. This is the magnitude of the predicted cortical response, and selection currently takes the largest. A larger response is not evidence of a better ad: a cluttered original with a wall of body text scores highly because it is taxing to read. Predicted response only, not measured emotion, engagement or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}

@@ -1,0 +1,6 @@
+torch==2.6.0
+torchvision==0.21.0
+numpy==2.2.6
+Pillow==11.3.0
+boltons==25.0.0
+deepgaze-pytorch @ git+https://github.com/matthias-k/DeepGaze.git@c7db17e2d1d7ea6468ffdee2cfaddf141095dcff

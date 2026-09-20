@@ -16,6 +16,7 @@ export type RunStage =
   | 'rendering'
   | 'scoring'
   | 'evolving'
+  | 'awaiting-selection'
   | 'finalizing'
   | 'complete'
   | 'cancelled'
@@ -41,6 +42,8 @@ export interface Brief {
   aspectRatio?: '9:16' | '16:9' | '1:1';
   originalMediaId?: string | null;
   originalAsset?: Asset;
+  selectionPolicy?: 'auto' | 'manual';
+  feedbackEveryRound?: boolean;
 }
 
 export interface MediaReview {
@@ -110,6 +113,7 @@ export interface Candidate {
   selected: boolean;
   provisional?: boolean;
   original?: boolean;
+  killed?: boolean;
   mutation: string;
 }
 
@@ -166,6 +170,7 @@ export interface Run {
   requiresReview?: boolean;
   neuralConfig?: { version: string; hash: string };
   neuralBaseline?: { candidateId: string; choice: string; mediaHash: string };
+  gate?: { token: string; round: number; status: 'pending' | 'submitted' | 'resolved'; eligibleIds: string[]; suggestedIds: string[]; note: string } | null;
 }
 
 export interface RunSummary {
@@ -178,6 +183,8 @@ export interface RunSummary {
 }
 
 export interface Config {
+  durableRuns?: boolean;
+  attentionMaps?: boolean;
   liveResearch: boolean;
   liveImages: boolean;
   liveVideos: boolean;
