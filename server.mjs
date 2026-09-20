@@ -9,6 +9,9 @@ import { ingestMedia, getUploadedAsset, assetsDir, MAX_MEDIA_BYTES } from './lib
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, 'data', 'runs');
+// Where scripts/build-demo-maps.mjs writes its artifacts.
+const mapsPath = hash => path.join(process.env.EVOLVE_MAPS_DIR || 'data/maps', `${hash}-maps.json`);
+
 const MIME = { '.mp4': 'video/mp4', '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.ttf': 'font/ttf' };
 
 async function save(run, directory = DATA) {
@@ -70,6 +73,13 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
       const pathname = decodeURIComponent(url.pathname);
       if (request.method === 'GET' && pathname === '/api/config') return json(response, 200, { ...providers.capabilities(), limits: LIMITS });
       if (request.method === 'GET' && pathname === '/api/runs') return json(response, 200, [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(run => ({ id: run.id, status: run.status, stage: run.stage, product: run.brief.product, createdAt: run.createdAt, metrics: run.metrics })));
+      // Precomputed attention/impact maps for one uploaded image, keyed by its
+      // media hash. Built offline by scripts/build-demo-maps.mjs because a 3x3
+      // impact map is ten GPU passes and must not be paid for during a demo.
+      if (request.method === 'GET' && /^\/api\/maps\/[a-f0-9]{64}$/.test(pathname)) {
+        try { return json(response, 200, JSON.parse(await readFile(mapsPath(pathname.split('/').at(-1)), 'utf8'))); }
+        catch { return json(response, 404, { error: 'No precomputed maps for this media.' }); }
+      }
       if (request.method === 'POST' && pathname === '/api/media') {
         const type = request.headers['content-type']?.split(';')[0];
         if (!['image/png', 'image/jpeg', 'image/webp', 'video/mp4'].includes(type)) return json(response, 415, { error: 'Upload PNG, JPEG, WebP or MP4 media.' });

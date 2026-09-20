@@ -26,8 +26,19 @@ const STAGE_TEXT: Record<RunStage, string> = {
   failed: 'Run failed.',
 };
 
-const TABS = ['candidates', 'lineage', 'brain', 'research', 'log'] as const;
+const TABS = ['candidates', 'lineage', 'brain', 'maps', 'research', 'log'] as const;
 type Tab = (typeof TABS)[number];
+
+// The maps tab fetches a precomputed artifact, so it is not worth loading until
+// someone opens it.
+const MapsView = dynamic(() => import('@/components/maps/MapsView'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-lg border border-dashed border-border px-5 py-10 text-center text-sm text-foreground-lighter">
+      Loading the maps…
+    </div>
+  ),
+});
 
 // WebGL and the mesh binaries are only worth loading if this tab is opened, and
 // the canvas cannot be server-rendered.
@@ -229,6 +240,8 @@ export default function RunWorkspace({
       )}
 
       {tab === 'brain' && <BrainView run={run} />}
+
+      {tab === 'maps' && <MapsView run={run} />}
 
       {tab === 'research' && (
         <div className="flex flex-col gap-4">
