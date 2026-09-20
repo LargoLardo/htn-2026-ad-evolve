@@ -115,9 +115,15 @@ and their difference is meaningless.
   it is alive. That is the DO shape, not the D1 shape. It also gives SSE
   subscribers a natural home: `lib/run-maps.mjs` already keeps a `listeners`
   set, which becomes the DO's WebSocket or SSE fan out.
-- **D1** only if run listing and cross run queries are wanted. An index of
-  `{ id, product, status, createdAt }` is genuinely relational; the run body is
-  not.
+- **D1** for run listing and cross run queries. An index of
+  `{ id, account, product, status, createdAt }` is genuinely relational; the
+  run body is not. **Separate by account from the first migration.** Every row
+  carries an account id and every query filters on it. Retrofitting tenancy
+  onto a single tenant schema means rewriting every query and backfilling every
+  row, and it is the kind of thing that is trivial on day one and a week of
+  work on day thirty. The same applies to R2 keys: prefix them by account, so
+  `<account>/<sha256>` rather than `<sha256>`, even though the content hash
+  alone would be unique.
 - **Cache API or KV** for `data/evaluation-cache`. It is a pure function cache
   keyed by a content hash, with no invalidation story, so TTL semantics fit.
 
