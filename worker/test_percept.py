@@ -42,6 +42,21 @@ class PerceptTests(unittest.TestCase):
         self.assertEqual(scoring.summarize(original + .5)['engagementScore'], 50)
         self.assertEqual(scoring.summarize(np.ones((1, 20484)))['engagementScore'], 50)
 
+    def test_parcel_traces_average_into_their_family_scores(self):
+        values = np.random.default_rng(7).normal(size=(8, 20484)).astype(np.float32)
+        reference = scoring.reference_stats(np.random.default_rng(8).normal(size=(8, 20484)).astype(np.float32))
+        families = scoring.summarize(values, reference)
+        parcels = scoring.parcel_traces(values, reference)
+        groups = scoring.family_parcels(scoring.load_atlas())
+        self.assertEqual(len(parcels), sum(len(group) for group in groups))
+        for region in families['regions']:
+            own = [p['values'] for p in parcels if p['key'] == region['key']]
+            self.assertTrue(own)
+            self.assertTrue(all(len(v) == families['frames'] for v in own))
+            # Rounding differs slightly: a family averages unrounded parcel traces.
+            self.assertAlmostEqual(float(np.mean(own)), region['score'], places=1)
+        self.assertTrue(all(0 <= value <= 100 for parcel in parcels for value in parcel['values']))
+
     def test_reference_roundtrip_rejects_corruption_and_runtime_changes(self):
         x = np.ones((10, 20484), dtype=np.float32)
         ref = scoring.encode_reference(x, 'media', 'pred', 'contract', {'torch': 'test'})
