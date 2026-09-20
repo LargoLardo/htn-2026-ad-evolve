@@ -9,7 +9,7 @@ const STAGES = [
   { n: '01', title: 'Research once', body: 'Turn the product, audience and goal into evidence-linked creative hypotheses.' },
   { n: '02', title: 'Generate genomes', body: 'Every concept gets a hook, visual approach, emotional angle, proof point, CTA, palette, motion and audio.' },
   { n: '03', title: 'Generate and review media', body: 'Generate image or video takes, review the media, and shortlist candidates for neural evaluation.' },
-  { n: '04', title: 'Evaluate and select', body: 'Rank reviewed candidates by Percept’s neural score against one fixed original baseline.' },
+  { n: ‘04’, title: ‘Evaluate and select’, body: ‘Rank reviewed candidates by neural score against one fixed original baseline.’ },
   { n: '05', title: 'Recombine and mutate', body: 'Preserve the best, mix parent genes, change one gene per child, repeat.' },
   { n: '06', title: 'Review finalists', body: 'Inspect genomes, compare generations, download the drafts and the full run.' },
 ];
@@ -26,8 +26,8 @@ const MODES = [
     rows: [['Generation', 'Portrait, landscape or square videos'], ['Review', 'Six sampled frames plus an audio transcript'], ['Evolution', 'Preserve the winner and mutate one gene per child']],
   },
   {
-    name: 'Percept scoring', span: 'md:col-span-6 xl:col-span-3',
-    tagline: 'The same four-family scoring mathematics as Percept.',
+    name: 'Neural scoring', span: 'md:col-span-6 xl:col-span-3',
+    tagline: 'Four-family Glasser scoring against one shared baseline.',
     rows: [['Baseline', 'One original creative, fixed across all generations'], ['Aggregation', 'Four equally weighted Glasser families'], ['Selection', 'Highest neural score among reviewed takes']],
   },
 ];
@@ -127,7 +127,7 @@ export default function Home() {
             </div>
             {/* The README is emphatic about this, so the marketing page says it too. */}
             <p className="mt-6 max-w-[80ch] text-sm text-foreground-lighter">
-              TRIBE v2 predicts cortical activity. Percept scoring requires no fitted decoder,
+              TRIBE v2 predicts cortical activity. Neural scoring requires no fitted decoder,
               but is not a validated emotion or conversion score. If every media review fails,
               a nonempty provisional shortlist remains visible with its failed checks intact.
             </p>

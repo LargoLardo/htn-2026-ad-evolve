@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "observability": { "enabled": true },
-  "vars": { "AUTH_MODE": "access", "PERCEPT_CONCURRENCY": "1" },
+  "vars": { "AUTH_MODE": "access", "TRIBE_CONCURRENCY": "1" },
   "durable_objects": { "bindings": [{ "name": "RUNS", "class_name": "RunDocument" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RunDocument"] }],
   "d1_databases": [{ "binding": "INDEX", "database_name": "advolve-index", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
@@ -17,8 +17,8 @@
     { "binding": "MAP_BUILD", "name": "advolve-maps", "class_name": "MapWorkflow" }
   ],
   "queues": {
-    "producers": [{ "binding": "PERCEPT", "queue": "advolve-percept" }],
-    "consumers": [{ "queue": "advolve-percept", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 8, "retry_delay": 30 }]
+    "producers": [{ "binding": "NEURAL", "queue": "advolve-neural" }],
+    "consumers": [{ "queue": "advolve-neural", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 8, "retry_delay": 30 }]
   },
-  "rules": [{ "type": "Text", "globs": ["**/percept_spec.json"], "fallthrough": true }]
+  "rules": [{ "type": "Text", "globs": ["**/neural_spec.json"], "fallthrough": true }]
 }

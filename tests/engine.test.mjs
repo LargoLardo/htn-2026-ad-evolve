@@ -14,18 +14,18 @@ const providers = {
   screenCandidate: async candidate => ({ mediaHash: fingerprint(candidate), quality: 80, briefAlignment: 80,
     checks: { productVisible: true, copyReadable: true, copyAccurate: true, claimsSupported: true, noMajorDefects: true },
     observedText: candidate.headline, reasons: [], visualTags: [candidate.genome.visual], provenance: 'TEST image review' }),
-  getNeuralConfig: () => ({ hash: 'test-atlas', version: 'percept-glasser-test' }),
+  getNeuralConfig: () => ({ hash: 'test-atlas', version: 'neural-glasser-test' }),
   scoreTribe: async (candidates, brief, { baseline } = {}) => {
     baseline ??= { hash: 'test-baseline', contractHash: 'test-atlas', mediaHash: candidates[0].asset.mediaHash };
     return { baseline, results: candidates.map(candidate => ({ id: candidate.id,
-      neural: { source: 'tribe-percept', engagementScore: 70,
+      neural: { source: 'tribe-neural', engagementScore: 70,
         baselineHash: baseline.hash, baselineMediaHash: baseline.mediaHash, contractHash: baseline.contractHash,
         confidence: null, provenance: 'TEST media normalization', networks: {} },
       mediaHash: fingerprint(candidate), metadata: { protocol: 'test-fixture', uncertainty: 'not-estimated' } })) };
   },
 };
 
-test('seeded evolution preserves elites, mutates descendants, reuses assets and uses Percept scores', async () => {
+test('seeded evolution preserves elites, mutates descendants, reuses assets and uses neural scores', async () => {
   const first = await evolveRun(createRun(validateBrief(input)), providers);
   const second = await evolveRun(createRun(validateBrief(input)), providers);
   assert.equal(first.status, 'completed');
@@ -43,7 +43,7 @@ test('seeded evolution preserves elites, mutates descendants, reuses assets and 
   }
   for (const candidate of first.finalists) {
     assert.ok(candidate.asset.url);
-    assert.equal(candidate.scores.source, 'tribe-percept');
+    assert.equal(candidate.scores.source, 'tribe-neural');
     assert.equal(candidate.scores.confidence, null);
   }
 });
@@ -67,7 +67,7 @@ test('TRIBE is gated, respects K, reuses elites and only selects reviewed neural
   assert.ok(result.metrics.tribeCalls <= 3);
   assert.ok(result.metrics.tribeCandidates <= 9);
   assert.equal(result.finalists.length, 3);
-  assert.ok(result.finalists.every(candidate => candidate.scores.source === 'tribe-percept'));
+  assert.ok(result.finalists.every(candidate => candidate.scores.source === 'tribe-neural'));
   assert.ok(result.finalists.every(candidate => candidate.scores.mediaHash === fingerprint(candidate)));
   assert.ok(result.finalists.every(candidate => candidate.scores.metadata.protocol === 'test-fixture' && candidate.scores.confidence === null));
   assert.ok(result.rounds.flatMap(round => round.candidates).some(candidate => candidate.scores.source === 'vision-review'));
@@ -106,7 +106,7 @@ test('failed image checks block both parents and finalists before neural inferen
 });
 
 test('highest neural score wins across visual bands; visual quality only breaks ties', () => {
-  const candidate = (fitness, engagementScore) => ({ scores: { source: 'tribe-percept', fitness, neural: { source: 'tribe-percept', engagementScore, usableForSelection: true } } });
+  const candidate = (fitness, engagementScore) => ({ scores: { source: 'tribe-neural', fitness, neural: { source: 'tribe-neural', engagementScore, usableForSelection: true } } });
   assert.ok(compareCandidates(candidate(90, 20), candidate(65, 80)) > 0);
   assert.ok(compareCandidates(candidate(81, 95), candidate(84, 10)) < 0);
   assert.ok(compareCandidates(candidate(81, 60), candidate(84, 60)) > 0);
@@ -135,7 +135,7 @@ test('one original baseline persists across generations and neural winners drive
   assert.equal(calls, 2);
   assert.equal(result.neuralBaseline.mediaHash, original.mediaHash);
   assert.equal(result.neuralBaseline.candidateId, result.rounds[0].shortlistIds[0]);
-  assert.ok(result.rounds.every(round => round.best === 80 && round.scoreKind === 'tribe-percept'));
+  assert.ok(result.rounds.every(round => round.best === 80 && round.scoreKind === 'tribe-neural'));
   assert.equal(result.finalists[0].scores.fitness, 65);
   assert.equal(result.finalists[0].scores.neural.engagementScore, 80);
   assert.notEqual(result.rounds[0].selectedIds[0], result.neuralBaseline.candidateId);

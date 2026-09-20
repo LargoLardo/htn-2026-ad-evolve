@@ -9,7 +9,7 @@ export default function Footer() {
         <BrandMark />
         <p className="max-w-[62ch] text-xs text-foreground-lighter">
           Advolve evaluates creative against predicted cortical response, scored by
-          Percept and TRIBE against one fixed original baseline. Predictions are
+          TRIBE against one fixed original baseline. Predictions are
           parcel-averaged and directional. They are not measured emotion, recall or
           conversion.
         </p>

@@ -27,10 +27,10 @@ export function baselineFor(mediaHash) {
 export function scoreResponse(body) {
   const baseline = body.baseline || baselineFor(body.candidates[0].media_hash);
   return { contract_hash: contract.hash, baseline, results: body.candidates.map(c => ({ id: c.id, media_hash: c.media_hash,
-    neural: { source: 'tribe-percept', version: contract.version, contractHash: contract.hash,
+    neural: { source: 'tribe-neural', version: contract.version, contractHash: contract.hash,
       baselineHash: baseline.hash, baselineMediaHash: baseline.mediaHash, engagementScore: 50, frames: 2, duration: 2,
       regions: FAMILY_KEYS.map(key => ({ key, name: key, score: 50, values: [45, 55] })), global: [45, 55], provenance: 'TEST ONLY' },
-    metadata: { runtime_versions: runtime, protocol: contract.protocol, percept_revision: contract.percept_revision, prediction_hash: sha256('prediction'), cached: false },
+    metadata: { runtime_versions: runtime, protocol: contract.protocol, neural_revision: contract.neural_revision, prediction_hash: sha256('prediction'), cached: false },
   })) };
 }
 export const openaiResponse = (parsed, extra = []) => ({ status: 'completed', output: [...extra, { type: 'message', content: [{ type: 'output_text', text: JSON.stringify(parsed), annotations: [] }] }] });

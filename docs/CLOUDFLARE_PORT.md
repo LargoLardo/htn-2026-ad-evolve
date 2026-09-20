@@ -14,7 +14,7 @@ Current implementation:
 - Optional winner maps update feedback at each breeding boundary.
 - Video remains supported via durable Seedance polling and Baseten FFmpeg review.
 - `deploy/baseten-media` reuses the exact DeepGaze grid/saliency implementation.
-- `lib/grid.mjs`, the Percept spec and the 10-second image stimulus are unchanged.
+- `lib/grid.mjs`, the neural spec and the 10-second image stimulus are unchanged.
 - Node data stays intact. Historical bytes/hashes must be preserved on import.
 
 Local tests cover account/JWT isolation, image ingestion, ranges, chunked state,
@@ -35,7 +35,7 @@ data/maps/<sha256>-maps.json map artifacts, plus -attention.png
 data/evaluation-cache/       provider response cache
 ```
 
-Two long jobs exist. An evolution run is about 25 minutes, dominated by Percept
+Two long jobs exist. An evolution run is about 25 minutes, dominated by TRIBE
 calls at roughly 119 seconds each. A map build is one call per occluded region.
 Both currently live in the memory of the one Node process and die with it, and
 neither can be paused or resumed, which is the single biggest obstacle to this
@@ -84,7 +84,7 @@ Browser
 Worker (Hono or plain fetch handler)          <- API, SSE, auth
   |-- R2            advolve-assets            <- PNG/MP4 bytes by sha256
   |-- D1 or DO      run documents             <- see "state" below
-  |-- Queue         advolve-percept           <- one message per stimulus
+  |-- Queue         advolve-neural           <- one message per stimulus
   |-- Workflow      map-build, evolution-run  <- durable multi step jobs
   |-- Images        binding                   <- replaces FFmpeg drawbox/scale
   `-- fetch         Baseten (TRIBE + DeepGaze), OpenAI
@@ -175,7 +175,7 @@ Only breeding blocks on the gate. Rendering and scoring for the round that has
 already been generated continue, so the GPU does not sit idle while a person
 thinks.
 
-Percept calls go through a **Queue** with `max_concurrency` matched to the
+TRIBE calls go through a **Queue** with `max_concurrency` matched to the
 Baseten replica count. This is the piece that fixes tonight's failure mode
 properly: the gateway killed 476 second requests because four stimuli were
 batched into one call. A queue with one stimulus per message and bounded
@@ -194,7 +194,7 @@ The keep alive still matters.
 2. Worker with the read routes and SSE, against R2 and a DO. No jobs yet.
 3. DeepGaze onto Baseten, swap the transport inside `buildAttentionMap`.
 4. Images binding for `maskCell`. The map pipeline now runs without Node.
-5. Map build as a Workflow, Percept through a Queue.
+5. Map build as a Workflow, TRIBE through a Queue.
 6. Evolution run as a Workflow, with the gate as `waitForEvent`.
 7. Video, or an explicit decision to drop it from the Worker build.
 
@@ -210,12 +210,12 @@ durable rather than merely hosted.
   rounding. It must survive the move to Baseten.
 - **Float determinism.** `statsF64` is a base64 float64 buffer used to validate
   that a baseline matches. Whatever serialises it must stay byte identical.
-- **Request duration.** A single Percept call is about 119 seconds. Subrequest
+- **Request duration.** A single TRIBE call is about 119 seconds. Subrequest
   and wall clock limits apply per step, so keep one stimulus per step.
 - **Scoring every candidate, not a shortlist.** Today only three takes per
-  round reach Percept, which is why half the lineage has no score. Scoring all
+  round reach TRIBE, which is why half the lineage has no score. Scoring all
   of them is the intent, and it multiplies the Queue's load by roughly three.
-- **Nothing here removes the GPU dependency.** Percept is 119 seconds per
+- **Nothing here removes the GPU dependency.** TRIBE is 119 seconds per
   stimulus on an L4 wherever it is called from. The one real lever is the
   stimulus itself: a still image is currently inflated into a 10 second video,
   about 250 identical frames, and every frame is scored. A shorter clip is

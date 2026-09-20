@@ -70,7 +70,7 @@ node cloudflare/scripts/deploy.mjs deploy
 ```
 
 `check` is read-only and prints only whether settings are present. `provision`
-creates/reuses the D1 database, private R2 bucket and Percept Queue, writes an
+creates/reuses the D1 database, private R2 bucket and neural Queue, writes an
 ignored concrete Wrangler configuration and applies the account-scoped schema.
 `deploy` also deploys the API, loads provider secrets from `.env` and
 `.env.cloudflare` into **API Worker secrets**, builds and deploys the frontend.
@@ -89,7 +89,7 @@ use mocked paid provider responses and do not prove live Baseten availability.
 
 ## Baseten media service
 
-TRIBE remains the existing deployment with its unchanged Percept contract and
+TRIBE remains the existing deployment with its unchanged neural contract and
 10-second still-image protocol. Deploy the separate service:
 
 ```sh
@@ -112,19 +112,19 @@ package does not start local model downloads or any decoder training.
 - R2 keys start with the authenticated account ID. Media, evaluation caches,
   results and map artifacts stay private. Image uploads normalize via Images;
   images allow 20 MiB and MP4s allow 50 MiB / 1–60 seconds.
-- Every Percept Queue request contains exactly **one stimulus**. Default Queue
-  consumer concurrency and `PERCEPT_CONCURRENCY` are both **1**.
+- Every neural Queue request contains exactly **one stimulus**. Default Queue
+  consumer concurrency and `TRIBE_CONCURRENCY` are both **1**.
 - Queue retries check actual Baseten replicas first. A sleeping deployment is
   woken without increasing min replicas. Raise concurrency only after polling
   `active_replica_count` to your target. Match the Queue's `max_concurrency`
-  and Worker `PERCEPT_CONCURRENCY`; restore min replicas to zero afterward.
+  and Worker `TRIBE_CONCURRENCY`; restore min replicas to zero afterward.
 - Workflow steps persist provider outputs. Render/review step names use the
   candidate ID so different parallel completion order cannot attach results
   to the wrong take during replay. Seedance job IDs are retained before polling.
 - Manual selection waits natively for an event, up to 30 days. Decisions are
   saved before notification, idempotent, and must retain 1–4 valid parents.
   Only breeding waits; the preceding round has finished scoring.
-- Per-round feedback is optional because each winner map adds one Percept pass
+- Per-round feedback is optional because each winner map adds one TRIBE pass
   per detected element. It accumulates measured notes before the next round.
 - Images encoding can produce different content hashes than local FFmpeg.
   **Existing `data/` is untouched.** Do not re-encode old media when migrating

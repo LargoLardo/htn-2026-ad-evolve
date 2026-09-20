@@ -2,7 +2,7 @@
 //
 //   node scripts/maps.mjs --image path/to/ad.png [--grid 3] [--attention-only]
 //
-// The attention map needs no GPU, so --attention-only works while the Percept
+// The attention map needs no GPU, so --attention-only works while the TRIBE
 // worker is cold or unconfigured.
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
@@ -43,7 +43,7 @@ if (has('attention-only')) {
   process.exit(0);
 }
 
-// A brief is required only so Percept can carry the run's context; the maps
+// A brief is required only so TRIBE can carry the run's context; the maps
 // themselves do not read it.
 const brief = { product: 'Map probe', description: basename(imagePath), mediaType: 'image' };
 const result = await buildMaps(asset, brief, { grid, heatmapPath: heatmap });
@@ -53,7 +53,7 @@ console.log(square(normalize(result.attention.map), grid));
 
 if (!result.impact) {
   console.log(`\nIMPACT     unavailable: ${result.impactError}`);
-  console.log('\nThe attention map stands alone. The gap needs Percept.\n');
+  console.log('\nThe attention map stands alone. The gap needs TRIBE.\n');
   process.exit(0);
 }
 
