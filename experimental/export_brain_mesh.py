@@ -71,15 +71,25 @@ def percept_module():
 
 
 def family_map(percept):
-    """One family per vertex: 0 for unassigned cortex, 1-4 in FAMILIES order."""
+    """Family per vertex (0 unassigned, 1-4 in FAMILIES order) and parcel per vertex.
+
+    Parcels are numbered 1-N across families in the same order percept_score.parcel_traces
+    emits them, and the manifest records each name so the client matches by name, never
+    by position.
+    """
     labels = np.zeros(DIMENSION, dtype=np.uint8)
+    parcel_labels = np.zeros(DIMENSION, dtype=np.uint16)
     groups = percept.family_parcels(percept.load_atlas())
-    for index, parcels in enumerate(groups, start=1):
-        for indices in parcels.values():
+    catalogue, number = [], 0
+    for index, ((key, *_), parcels) in enumerate(zip(percept.FAMILIES, groups), start=1):
+        for name, indices in parcels.items():
+            number += 1
             labels[indices] = index
+            parcel_labels[indices] = number
+            catalogue.append({"index": number, "name": name, "family": key})
     if not labels.any():
         raise ValueError("No Percept family matched any atlas parcel.")
-    return labels, groups
+    return labels, parcel_labels, catalogue, groups
 
 
 def export(output_dir):
@@ -97,7 +107,7 @@ def export(output_dir):
         load_surf_data(fsaverage["sulc_left"]),
         load_surf_data(fsaverage["sulc_right"]),
     ]).astype(np.float32)
-    families, groups = family_map(percept)
+    families, parcel_labels, catalogue, groups = family_map(percept)
     if len(coordinates) != DIMENSION or len(sulcal_depth) != DIMENSION:
         raise ValueError("Mesh, curvature and prediction dimensions disagree.")
     if not np.isfinite(coordinates).all() or not np.isfinite(sulcal_depth).all():
@@ -116,14 +126,16 @@ def export(output_dir):
         "indices.u32": faces.astype("<u4").tobytes(),
         "sulc.f32": sulcal_depth.astype("<f4").tobytes(),
         "family.u8": families.tobytes(),
+        "parcel.u16": parcel_labels.astype("<u2").tobytes(),
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in files.items():
         (output_dir / name).write_bytes(payload)
 
     manifest = {
-        "schema": "evolve-brain-mesh-v2",
+        "schema": "evolve-brain-mesh-v3",
         "surface": "fsaverage5 pial",
+        "parcels": catalogue,
         "vertex_order": "left-then-right",
         "vertexCount": len(positions),
         "faceCount": len(faces),

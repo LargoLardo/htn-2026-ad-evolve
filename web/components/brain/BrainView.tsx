@@ -5,7 +5,7 @@ import { Pause, Play } from 'lucide-react';
 import { assetLink } from '@/lib/api';
 import type { Candidate, NeuralScore, Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import BrainCanvas from './BrainCanvas';
+import BrainCanvas, { MAX_PARCELS } from './BrainCanvas';
 
 /** Family order and colours come from worker/percept_score.py, so the surface, the
  *  legend and the traces all name the same four families. */
@@ -39,6 +39,7 @@ interface MeshManifest {
     anatomy: string;
     sources: { text: string; doi: string }[];
   }[];
+  parcels: { index: number; name: string; family: string }[];
 }
 
 const trace = (neural: NeuralScore, key: string) =>
@@ -128,9 +129,6 @@ export default function BrainView({ run }: { run: Run }) {
     [regions]
   );
 
-  const select = useCallback((id: string) => setSelectedId(id), []);
-  const illustrative = regions.length === 0;
-
   // 0 means nothing is picked; 1-4 index the families in FAMILIES order.
   const [family, setFamily] = useState(0);
   const [manifest, setManifest] = useState<MeshManifest | null>(null);
@@ -147,15 +145,47 @@ export default function BrainView({ run }: { run: Run }) {
     };
   }, []);
 
+  // One level per parcel. A run scored before per-parcel traces existed, and the
+  // illustrative state, fall back to the family's own level for all of its parcels.
+  const parcelLevels = useMemo(() => {
+    const values = new Float32Array(MAX_PARCELS);
+    if (!manifest) return values;
+    const traces = new Map(neural?.parcels?.map((parcel) => [parcel.name, parcel.values]) ?? []);
+    for (const parcel of manifest.parcels) {
+      if (parcel.index >= MAX_PARCELS) continue;
+      const trace = traces.get(parcel.name);
+      if (trace) {
+        values[parcel.index] = intensity(trace[frame] ?? trace.at(-1) ?? PARITY);
+        continue;
+      }
+      const family = FAMILIES.findIndex((item) => item.key === parcel.family);
+      values[parcel.index] = levels[family] ?? 0;
+    }
+    return values;
+  }, [frame, levels, manifest, neural]);
+
+  const select = useCallback((id: string) => setSelectedId(id), []);
+  const illustrative = regions.length === 0;
+
   const detail = family > 0 ? manifest?.families.find((item) => item.index === family) : undefined;
   const detailRegion = family > 0 ? regions[family - 1] : undefined;
+
+  const detailParcels = useMemo(() => {
+    if (!detail) return [];
+    const traces = new Map(
+      neural?.parcels?.filter((parcel) => parcel.key === detail.key).map((parcel) => [parcel.name, parcel.values]) ?? []
+    );
+    return detail.parcels
+      .map((name) => ({ name, value: traces.get(name)?.[frame] ?? null }))
+      .sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
+  }, [detail, frame, neural]);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
         <div className="relative h-[520px] overflow-hidden rounded-lg border border-border bg-black">
           <BrainCanvas
-            levels={levels}
+            parcelLevels={parcelLevels}
             colors={colors}
             activityLevel={1}
             selected={family}
@@ -290,9 +320,22 @@ export default function BrainView({ run }: { run: Run }) {
                 )}
               </dl>
               <p className="text-[11px] leading-relaxed text-foreground-light">{detail.anatomy}</p>
-              <p className="text-[11px] leading-relaxed text-foreground-lighter">
-                {detail.parcels.join(', ')}
-              </p>
+              {detailParcels.some((parcel) => parcel.value !== null) ? (
+                <ul className="flex flex-col gap-0.5">
+                  {detailParcels.map((parcel) => (
+                    <li key={parcel.name} className="flex items-baseline justify-between gap-2 text-[11px]">
+                      <span className="text-foreground-lighter">{parcel.name}</span>
+                      <span className="tabular-nums text-foreground-light">
+                        {parcel.value === null ? '–' : parcel.value.toFixed(1)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[11px] leading-relaxed text-foreground-lighter">
+                  {detail.parcels.join(', ')}
+                </p>
+              )}
               <ul className="flex flex-col gap-1 border-t border-border pt-2">
                 {detail.sources.map((source) => (
                   <li key={source.doi} className="text-[10px] leading-relaxed text-foreground-lighter">

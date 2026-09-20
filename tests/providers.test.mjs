@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { capabilities, generateConcepts, renderCandidate, research, scoreTribe, screenCandidate } from '../lib/providers.mjs';
+import { validateNeural } from '../lib/scoring-contract.mjs';
 import { baselineFor, candidate, contract, fixture, isolatedConfig, openaiResponse, scoreResponse } from './helpers.mjs';
 
 const brief = { product: 'Example', description: 'A reusable notebook', audience: 'Designers', goal: 'Discovery', mode: 'live', population: 1, mediaType: 'image' };
@@ -110,6 +111,26 @@ test('video payloads are bounded to one clip per worker request', async t => {
   const result = await scoreTribe([video, still], brief);
   assert.deepEqual(sizes, [1, 1]);
   assert.equal(result.baseline.mediaHash, video.asset.mediaHash);
+});
+
+test('per-parcel traces are optional, but validated against the frame count when sent', () => {
+  const baseline = baselineFor('a'.repeat(64));
+  const one = { id: 'one', media_hash: 'b'.repeat(64) };
+  const result = scoreResponse({ baseline, candidates: [{ id: one.id, media_hash: one.media_hash }] }).results[0];
+  // Runs scored before per-parcel traces existed stay valid.
+  assert.equal(validateNeural(result, one, baseline, contract).parcels, undefined);
+
+  const withParcels = neural => ({ ...result, neural: { ...result.neural, parcels: neural } });
+  assert.equal(validateNeural(withParcels([{ key: 'visual_motion', name: 'MT', values: [45, 55] }]), one, baseline, contract).parcels.length, 1);
+  for (const invalid of [
+    [{ key: 'visual_motion', name: 'MT', values: [45] }],
+    [{ key: 'not_a_family', name: 'MT', values: [45, 55] }],
+    [{ key: 'visual_motion', name: '', values: [45, 55] }],
+    [{ key: 'visual_motion', name: 'MT', values: [45, 140] }],
+    [],
+  ]) {
+    assert.throws(() => validateNeural(withParcels(invalid), one, baseline, contract), /parcel traces/);
+  }
 });
 
 test('invalid baseline, runtime, protocol and media results are rejected before caching', async t => {

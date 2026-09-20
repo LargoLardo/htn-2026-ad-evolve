@@ -79,6 +79,25 @@ def summarize(predictions, reference=None, atlas=None, tr=1.0):
         peak=dict(time=round(peak * tr, 2), label=regions[0]['short'], value=round(float(global_trace[peak]), 2)))
 
 
+def parcel_traces(predictions, reference=None, atlas=None):
+    """Each parcel's own trace, before summarize() averages them into a family.
+
+    Same normalization and scaling as the family traces, so a family's score is the
+    mean of its parcels here. summarize() is left untouched: its output is compared
+    against the upstream Percept oracle fixture.
+    """
+    values = checked_predictions(predictions)
+    mu, sd = reference if reference is not None else reference_stats(values)
+    z = (values - np.asarray(mu).reshape(1, -1)) / np.maximum(np.asarray(sd).reshape(1, -1), 1e-6)
+    groups = family_parcels(load_atlas() if atlas is None else atlas)
+    traces = []
+    for (key, *_), parcels in zip(FAMILIES, groups):
+        for name, indices in parcels.items():
+            trace = np.clip(50.0 * (1.0 + z[:, indices].mean(axis=1) / 2.0), 0, 100).astype(np.float32)
+            traces.append(dict(key=key, name=name, values=np.round(trace, 1).tolist()))
+    return traces
+
+
 def encode_reference(predictions, media_hash, prediction_hash, contract_hash, runtime):
     mean, sd = reference_stats(predictions)
     raw = np.stack([mean, sd]).astype('<f8').tobytes()

@@ -9,20 +9,30 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 /** The mesh is fsaverage5 in left-then-right vertex order, the same order the worker
  *  scores, and aFamily is the Percept family each vertex belongs to (0 = none, 1-4 in
  *  FAMILIES order). See experimental/export_brain_mesh.py. */
-const MESH_FILES = ['positions.f32', 'indices.u32', 'sulc.f32', 'family.u8'] as const;
+const MESH_FILES = ['positions.f32', 'indices.u32', 'sulc.f32', 'family.u8', 'parcel.u16'] as const;
+
+/** 47 parcels today, with headroom; index 0 is unassigned cortex. */
+export const MAX_PARCELS = 64;
 
 const vertexShader = /* glsl */ `
   attribute float aSulc;
   attribute float aFamily;
+  attribute float aParcel;
+
+  uniform float uParcelLevel[${MAX_PARCELS}];
 
   varying vec3 vNormalView;
   varying vec3 vPositionView;
   varying float vSulc;
+  varying float vParcelLevel;
   varying vec4 vFamilyMask;
 
   void main() {
     vNormalView = normalize(normalMatrix * normal);
     vSulc = aSulc;
+    // Dynamic indexing of a uniform array is allowed in vertex shaders, which keeps
+    // per-parcel levels out of a data texture.
+    vParcelLevel = uParcelLevel[int(aParcel)];
     // One-hot here, so a triangle spanning two families blends those two rather
     // than interpolating the index through whatever family sits between them.
     vFamilyMask = vec4(
@@ -46,6 +56,7 @@ const fragmentShader = /* glsl */ `
   varying vec3 vNormalView;
   varying vec3 vPositionView;
   varying float vSulc;
+  varying float vParcelLevel;
   varying vec4 vFamilyMask;
 
   void main() {
@@ -62,7 +73,8 @@ const fragmentShader = /* glsl */ `
     float share = mask.x + mask.y + mask.z + mask.w;
     vec3 tint = (mask.x * uFamilyColor[0] + mask.y * uFamilyColor[1]
       + mask.z * uFamilyColor[2] + mask.w * uFamilyColor[3]) / max(share, 0.0001);
-    float level = dot(mask, uFamilyLevel * uFamilyFocus) * uActivityLevel;
+    // Hue identifies the family; brightness is this parcel's own score.
+    float level = vParcelLevel * dot(mask, uFamilyFocus) * uActivityLevel;
 
     // The tint carries the surface shading, so gyri and sulci stay legible through a
     // lit family instead of flattening into a decal. A floor keeps an unlit family
@@ -79,7 +91,7 @@ async function loadMesh(): Promise<THREE.BufferGeometry> {
   for (const response of responses) {
     if (!response.ok) throw new Error('The brain mesh is missing. Run experimental/export_brain_mesh.py.');
   }
-  const [positions, indices, sulc, families] = await Promise.all(
+  const [positions, indices, sulc, families, parcels] = await Promise.all(
     responses.map((response) => response.arrayBuffer())
   );
 
@@ -91,13 +103,17 @@ async function loadMesh(): Promise<THREE.BufferGeometry> {
     'aFamily',
     new THREE.BufferAttribute(Float32Array.from(new Uint8Array(families)), 1)
   );
+  geometry.setAttribute(
+    'aParcel',
+    new THREE.BufferAttribute(Float32Array.from(new Uint16Array(parcels)), 1)
+  );
   geometry.computeVertexNormals();
   return geometry;
 }
 
 function Cortex({
   geometry,
-  levels,
+  parcelLevels,
   colors,
   activityLevel,
   selected,
@@ -105,7 +121,7 @@ function Cortex({
   onHover,
 }: {
   geometry: THREE.BufferGeometry;
-  levels: number[];
+  parcelLevels: Float32Array;
   colors: string[];
   activityLevel: number;
   selected: number;
@@ -117,7 +133,7 @@ function Cortex({
   const uniforms = useMemo(
     () => ({
       uActivityLevel: { value: 0 },
-      uFamilyLevel: { value: new THREE.Vector4(0, 0, 0, 0) },
+      uParcelLevel: { value: new Float32Array(MAX_PARCELS) },
       uFamilyFocus: { value: new THREE.Vector4(1, 1, 1, 1) },
       uFamilyColor: { value: colors.map((color) => new THREE.Color(color)) },
     }),
@@ -134,15 +150,14 @@ function Cortex({
   };
 
   // Ease every level rather than snapping, so the playhead reads as a signal
-  // moving through the cortex instead of four lamps flicking on and off.
+  // moving through the cortex instead of parcels flicking on and off.
   useFrame((_state, delta) => {
     if (!material.current) return;
     const step = Math.min(1, delta * 6);
-    const current = material.current.uniforms.uFamilyLevel.value as THREE.Vector4;
-    current.x += ((levels[0] ?? 0) - current.x) * step;
-    current.y += ((levels[1] ?? 0) - current.y) * step;
-    current.z += ((levels[2] ?? 0) - current.z) * step;
-    current.w += ((levels[3] ?? 0) - current.w) * step;
+    const current = material.current.uniforms.uParcelLevel.value as Float32Array;
+    for (let parcel = 0; parcel < current.length; parcel += 1) {
+      current[parcel] += ((parcelLevels[parcel] ?? 0) - current[parcel]) * step;
+    }
 
     const focus = material.current.uniforms.uFamilyFocus.value as THREE.Vector4;
     const target = [1, 2, 3, 4].map((family) => (selected === 0 || selected === family ? 1 : 0.45));
@@ -184,13 +199,13 @@ function Cortex({
 }
 
 export default function BrainCanvas({
-  levels,
+  parcelLevels,
   colors,
   activityLevel,
   selected,
   onSelect,
 }: {
-  levels: number[];
+  parcelLevels: Float32Array;
   colors: string[];
   activityLevel: number;
   selected: number;
@@ -246,7 +261,7 @@ export default function BrainCanvas({
     >
       <Cortex
         geometry={mesh}
-        levels={levels}
+        parcelLevels={parcelLevels}
         colors={colors}
         activityLevel={activityLevel}
         selected={selected}
