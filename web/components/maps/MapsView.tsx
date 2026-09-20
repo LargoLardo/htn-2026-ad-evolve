@@ -162,19 +162,40 @@ export default function MapsView({ run }: { run: Run }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="relative overflow-hidden rounded-lg border border-border">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {src && <img src={src} alt="Original ad" className="block w-full" />}
-          <div
-            className="absolute inset-0 grid"
-            style={{ gridTemplateColumns: `repeat(${grid}, 1fr)`, gridTemplateRows: `repeat(${grid}, 1fr)` }}
-          >
-            {values.map((value, index) => (
-              <div key={index} className="relative border border-white/10" style={{ background: shade(value, layer) }}>
-                <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] tabular-nums text-white">
-                  {layer === 'gap' ? (value >= 0 ? '+' : '') : ''}{value.toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
+          {src && <img src={src} alt="Ad being mapped" className="block w-full" />}
+
+          {/* Attention is a continuous 1024px density, so it is painted from the
+              heatmap PNG rather than reduced to cells. The PNG is greyscale and
+              is used as a mask over a flat colour, which keeps the artifact
+              generic and lets the theme pick the hue. Impact and the gap stay
+              cellular because each cell is one GPU call and there is no finer
+              signal to show. */}
+          {layer === 'attention' ? (
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundColor: 'rgb(199, 240, 120)',
+                WebkitMaskImage: `url(/api/maps/${chosen}/attention.png)`,
+                maskImage: `url(/api/maps/${chosen}/attention.png)`,
+                WebkitMaskSize: '100% 100%',
+                maskSize: '100% 100%',
+                opacity: 0.78,
+              }}
+            />
+          ) : (
+            <div
+              className="absolute inset-0 grid"
+              style={{ gridTemplateColumns: `repeat(${grid}, 1fr)`, gridTemplateRows: `repeat(${grid}, 1fr)` }}
+            >
+              {values.map((value, index) => (
+                <div key={index} className="relative border border-white/10" style={{ background: shade(value, layer) }}>
+                  <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] tabular-nums text-white">
+                    {layer === 'gap' ? (value >= 0 ? '+' : '') : ''}{value.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 text-sm">

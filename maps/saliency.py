@@ -92,8 +92,17 @@ def to_grid(density, n):
 
 
 def write_heatmap(density, path):
-    """Grey ad-agnostic ramp; the UI colours it. Saved at the analysed size."""
-    Image.fromarray((np.clip(density, 0, 1) * 255).astype(np.uint8), mode="L").save(path)
+    """White pixels with density in the ALPHA channel.
+
+    A greyscale PNG has no alpha, and CSS mask-image masks on alpha by default,
+    so a grey ramp masks at 100% everywhere and tints the whole ad. Putting the
+    density in alpha makes the file work both as a CSS mask and as a plain <img>
+    overlay, without depending on mask-mode: luminance, which Safari handles
+    inconsistently.
+    """
+    alpha = (np.clip(density, 0, 1) * 255).astype(np.uint8)
+    rgba = np.dstack([np.full_like(alpha, 255)] * 3 + [alpha])
+    Image.fromarray(rgba, mode="RGBA").save(path)
 
 
 def main():

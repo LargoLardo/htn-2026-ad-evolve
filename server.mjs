@@ -84,6 +84,17 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
           return json(response, 200, names.flatMap(name => name.match(/^([a-f0-9]{64})-maps\.json$/)?.[1] ?? []));
         } catch { return json(response, 200, []); }
       }
+      // The full-resolution attention heatmap. DeepGaze produces a continuous
+      // 1024px density; reducing it to grid cells for display throws that away,
+      // so the UI overlays this greyscale PNG directly.
+      if (request.method === 'GET' && /^\/api\/maps\/[a-f0-9]{64}\/attention\.png$/.test(pathname)) {
+        const file = mapsPath(pathname.split('/').at(-2)).replace(/-maps\.json$/, '-attention.png');
+        try {
+          const bytes = await readFile(file);
+          response.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'Content-Length': bytes.length });
+          return response.end(request.method === 'HEAD' ? undefined : bytes);
+        } catch { return json(response, 404, { error: 'No attention heatmap for this media.' }); }
+      }
       if (request.method === 'GET' && /^\/api\/maps\/[a-f0-9]{64}$/.test(pathname)) {
         try { return json(response, 200, JSON.parse(await readFile(mapsPath(pathname.split('/').at(-1)), 'utf8'))); }
         catch { return json(response, 404, { error: 'No precomputed maps for this media.' }); }
