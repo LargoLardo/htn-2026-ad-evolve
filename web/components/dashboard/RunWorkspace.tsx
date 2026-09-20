@@ -94,9 +94,19 @@ export default function RunWorkspace({
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [running]);
-  const elapsedMs = running
-    ? Math.max(run.metrics.elapsedMs, now - new Date(run.createdAt).getTime())
-    : run.metrics.elapsedMs;
+  // metrics.elapsedMs is only written when a stage changes, so on a finished
+  // run it stops at the last stage boundary rather than at the end, and while
+  // one is live it sits still for the two minutes a Percept pass takes. Both
+  // under-report. The event log has real timestamps, so measure the span that
+  // actually happened and fall back to the recorded figure only when there is
+  // nothing to measure.
+  const elapsedMs = useMemo(() => {
+    const started = new Date(run.createdAt).getTime();
+    if (running) return Math.max(run.metrics.elapsedMs, now - started);
+    const last = run.events?.at(-1)?.time;
+    const measured = last ? new Date(last).getTime() - started : 0;
+    return Number.isFinite(measured) && measured > 0 ? measured : run.metrics.elapsedMs;
+  }, [running, now, run.createdAt, run.events, run.metrics.elapsedMs]);
 
   const allCandidates = useMemo(
     () => run.rounds.flatMap((round) => round.candidates),

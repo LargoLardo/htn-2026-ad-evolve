@@ -22,6 +22,8 @@ type Layer = 'attention' | 'impact' | 'gap';
 interface MapElement {
   label: string;
   kind: string;
+  /** Detection order. This list is sorted by gap, impact.maps is not. */
+  order?: number;
   x: number; y: number; w: number; h: number;
   coverage: number;
   attention: number | null;
@@ -31,7 +33,7 @@ interface MapElement {
 
 interface MapsArtifact {
   mediaHash: string;
-  grid: number;
+  label?: string;
   elements?: MapElement[];
   attention: { map: number[]; source: string; provenance: string };
   impact: { maps: Record<string, number[]>; calls: number; provenance: string } | null;
@@ -159,20 +161,28 @@ export default function MapsView({ run }: { run: Run }) {
   const current = options.find(item => item.hash === chosen);
   const src = assetLink(current?.url);
 
-  const values = useMemo(() => {
-    if (!data) return null;
-    const attention = normalize(data.attention.map);
-    const impactRaw = data.impact?.maps[metric] ?? data.impact?.maps.engagement;
-    const impact = impactRaw ? normalize(impactRaw) : null;
-    if (layer === 'attention') return attention;
-    if (layer === 'impact') return impact;
-    // Gap is signed, so it is scaled by its own largest magnitude rather than
-    // min-max normalised; zero has to stay in the middle or the colours lie.
-    if (!impact) return null;
-    const diff = attention.map((v, i) => v - impact[i]);
-    const scale = Math.max(...diff.map(Math.abs)) || 1;
-    return diff.map(v => v / scale);
-  }, [data, layer, metric]);
+  /**
+   * Elements to paint, largest first so a small element drawn inside a big one
+   * stays visible. Impact is re-derived for the chosen family, since switching
+   * family must not need another GPU pass.
+   */
+  const painted = useMemo(() => {
+    const elements = data?.elements ?? [];
+    if (!elements.length) return [];
+    const perFamily = data?.impact?.maps?.[metric];
+    const impact = perFamily ? normalize(perFamily) : null;
+    const attention = normalize(elements.map(element => element.attention ?? 0));
+    return elements
+      .map((element, index) => {
+        // data.elements is sorted by gap, the artifact's maps are in detection
+        // order, so the family override has to be looked up by the element's
+        // own index rather than its position in this list.
+        const own = impact && typeof element.order === 'number' ? impact[element.order] : null;
+        const drive = own ?? element.impact ?? 0;
+        return { ...element, shown: attention[index] - drive, drive, gaze: attention[index] };
+      })
+      .sort((a, b) => (b.w * b.h) - (a.w * a.h));
+  }, [data, metric]);
 
   if (available === null) return <Empty>Looking for precomputed maps…</Empty>;
   const progress = job && job.status === 'running' ? <BuildProgress job={job} /> : null;
@@ -195,9 +205,8 @@ export default function MapsView({ run }: { run: Run }) {
     </Empty>
   );
   if (error) return <>{progress}<Empty>{error}</Empty></>;
-  if (!data || !values) return <>{progress}<Empty>Loading maps…</Empty></>;
+  if (!data) return <>{progress}<Empty>Loading maps…</Empty></>;
 
-  const grid = data.grid;
   const hasImpact = Boolean(data.impact);
   const elements = data.elements ?? [];
 
@@ -263,29 +272,25 @@ export default function MapsView({ run }: { run: Run }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {src && <img src={src} alt="Ad being mapped" className="block w-full" />}
 
-          {/* Attention is a continuous 1024px density, so it is painted from the
-              heatmap PNG rather than reduced to cells. The PNG is greyscale and
-              is used as a mask over a flat colour, which keeps the artifact
-              generic and lets the theme pick the hue. Impact and the gap stay
-              cellular because each cell is one GPU call and there is no finer
-              signal to show. */}
+          {/* Attention is a continuous 1024px density, painted from the heatmap
+              PNG. Impact and the gap are one measurement per element, so they
+              paint the elements themselves. Anywhere no element was detected
+              stays unpainted, which is honest: nothing was measured there. A
+              grid used to imply the whole ad had been measured. */}
           {layer === 'attention' ? (
             <AttentionHeatmap src={`/api/maps/${chosen}/attention.png`} />
           ) : (
-            <div
-              className="absolute inset-0 grid"
-              style={{ gridTemplateColumns: `repeat(${grid}, 1fr)`, gridTemplateRows: `repeat(${grid}, 1fr)` }}
-            >
-              {values.map((value, index) => (
-                <div key={index} className="relative border border-white/10" style={{ background: shade(value, layer) }}>
-                  {/* Per-cell numbers stop being readable once cells are small,
-                      and at that point the element labels carry the meaning. */}
-                  {grid <= 4 && (
-                    <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] tabular-nums text-white">
-                      {layer === 'gap' ? (value >= 0 ? '+' : '') : ''}{value.toFixed(2)}
-                    </span>
-                  )}
-                </div>
+            <div className="pointer-events-none absolute inset-0">
+              {painted.map((element, index) => (
+                <div
+                  key={index}
+                  className="absolute"
+                  style={{
+                    left: `${element.x * 100}%`, top: `${element.y * 100}%`,
+                    width: `${element.w * 100}%`, height: `${element.h * 100}%`,
+                    background: layer === 'gap' ? gapShade(element.shown) : driveShade(element.drive),
+                  }}
+                />
               ))}
             </div>
           )}
@@ -316,23 +321,21 @@ export default function MapsView({ run }: { run: Run }) {
           {elements.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <p className="label">What each part is doing</p>
-              <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
-                {elements.map((element, index) => (
-                  <li key={index} className="flex items-baseline justify-between gap-2 bg-surface-100 px-2.5 py-1.5">
-                    <span className="min-w-0 flex-1 truncate text-xs text-foreground" title={element.label}>{element.label}</span>
-                    <span
-                      className="shrink-0 text-[11px] tabular-nums"
-                      style={{ color: (element.gap ?? 0) >= 0 ? '#ff8228' : '#22cde1' }}
-                      title={(element.gap ?? 0) >= 0 ? 'Looked at more than it moves the response' : 'Moves the response more than it is looked at'}
-                    >
-                      {(element.gap ?? 0) >= 0 ? '+' : ''}{(element.gap ?? 0).toFixed(2)}
-                    </span>
-                  </li>
-                ))}
+              <ul className="flex flex-col gap-2.5">
+                {painted
+                  .slice()
+                  .sort((a, b) => b.shown - a.shown)
+                  .map((element, index) => (
+                    <li key={index} className="flex flex-col gap-1">
+                      <span className="truncate text-xs text-foreground" title={element.label}>{element.label}</span>
+                      <Bar label="looked at" value={element.gaze} tint="rgb(148,163,184)" />
+                      <Bar label="does" value={element.drive} tint="rgb(148,163,184)" />
+                      <span className="text-[11px]" style={{ color: verdictColour(element.shown) }}>
+                        {verdict(element.shown)}
+                      </span>
+                    </li>
+                  ))}
               </ul>
-              <p className="text-xs text-foreground-lighter">
-                Sorted worst first. Positive is dead weight: looked at, does not move the response.
-              </p>
             </div>
           )}
           <p className="text-xs text-foreground-lighter">{data.attention.provenance}</p>
@@ -367,13 +370,15 @@ function ramp(t: number): [number, number, number] {
  *  "the two maps agree" would read as an extreme. Orange against cyan is the
  *  highest-contrast opposed pair that survives both colour blindness and a
  *  photographic background. */
-function shade(value: number, layer: Layer) {
-  if (layer === 'gap') {
-    const weight = Math.min(0.85, Math.abs(value) * 0.85);
-    return value >= 0 ? `rgba(255, 130, 40, ${weight})` : `rgba(34, 205, 225, ${weight})`;
-  }
+function gapShade(value: number) {
+  const weight = 0.22 + Math.min(0.6, Math.abs(value) * 0.6);
+  return value >= 0 ? `rgba(255, 130, 40, ${weight})` : `rgba(34, 205, 225, ${weight})`;
+}
+
+function driveShade(value: number) {
   const [r, g, b] = ramp(value);
-  // Floor the alpha so a cold cell still reads as measured rather than absent.
+  // Floor the alpha so a cold element still reads as measured rather than
+  // absent. Absent means no element was detected there at all.
   return `rgba(${r}, ${g}, ${b}, ${0.25 + Math.min(0.62, value * 0.62)})`;
 }
 
@@ -420,11 +425,12 @@ function AttentionHeatmap({ src }: { src: string }) {
 
 function Legend({ layer }: { layer: Layer }) {
   if (layer === 'attention') return <Note title="Where eyes go">DeepGaze IIE predicted fixation density. Brighter means more predicted gaze.</Note>;
-  if (layer === 'impact') return <Note title="What moves the response">Occlude a cell, rescore with Percept, measure the drop. Brighter means occluding it changed the predicted response more.</Note>;
+  if (layer === 'impact') return <Note title="What moves the response">Each element is hidden and the ad rescored. Brighter means hiding it changed the predicted response more.</Note>;
   return (
-    <Note title="Attention minus impact">
-      <span className="text-[#ff8228]">Orange</span> is looked at but does nothing.{' '}
-      <span className="text-[#22cde1]">Cyan</span> drives the response without drawing the eye. Faint means the two agree.
+    <Note title="Looked at, versus what moves the response">
+      <span className="text-[#ff8228]">Orange</span> is dead weight.{' '}
+      <span className="text-[#22cde1]">Cyan</span> is carrying the ad. Unpainted means no element was detected there,
+      so nothing was measured.
     </Note>
   );
 }
@@ -485,5 +491,44 @@ function BuildProgress({ job }: { job: MapsJob }) {
         );
       })}
     </div>
+  );
+}
+
+
+/**
+ * The verdict, in words.
+ *
+ * This used to be a signed number, which collided with the score on the node
+ * cards where a minus sign means worse. Here a minus sign meant the element
+ * was carrying the ad, so the same symbol meant opposite things on one screen.
+ * Words cannot collide.
+ */
+const DEAD = 0.15;
+
+function verdict(value: number) {
+  if (value > DEAD) return 'dead weight';
+  if (value < -DEAD) return 'carrying the ad';
+  return 'neutral';
+}
+
+function verdictColour(value: number) {
+  if (value > DEAD) return '#ff8228';
+  if (value < -DEAD) return '#22cde1';
+  return 'var(--color-foreground-lighter, #8b8b8b)';
+}
+
+/** Two bars beat one subtraction: you compare lengths instead of reading a
+ *  difference someone else already computed for you. */
+function Bar({ label, value, tint }: { label: string; value: number; tint: string }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="w-16 shrink-0 text-[10px] text-foreground-lighter">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-300">
+        <span
+          className="block h-full rounded-full"
+          style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`, background: tint }}
+        />
+      </span>
+    </span>
   );
 }

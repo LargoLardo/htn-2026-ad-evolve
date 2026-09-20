@@ -7,7 +7,6 @@ import { createRun, evolveRun, LIMITS, validateBrief } from './lib/evolution.mjs
 import * as defaultProviders from './lib/providers.mjs';
 import { ingestMedia, getUploadedAsset, assetsDir, MAX_MEDIA_BYTES } from './lib/media.mjs';
 import { getRunMaps, startRunMaps, watchRunMaps } from './lib/run-maps.mjs';
-import { DEFAULT_GRID } from './lib/grid.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, 'data', 'runs');
@@ -159,8 +158,7 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
         // back from the stream below.
         if (request.method === 'POST' && route[2] === 'maps') {
           if (run.status === 'running') return json(response, 409, { error: 'Wait for the run to finish before building its maps.' });
-          const grid = Number(url.searchParams.get('grid')) || DEFAULT_GRID;
-          return json(response, 202, startRunMaps(run, { grid }));
+          return json(response, 202, startRunMaps(run));
         }
         if (request.method === 'GET' && route[2] === 'maps') return json(response, 200, getRunMaps(run.id) ?? { runId: run.id, status: 'idle', targets: [] });
         // Server-sent events rather than polling: the interesting thing is the
