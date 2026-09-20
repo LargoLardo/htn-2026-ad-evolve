@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { assetLink } from '@/lib/api';
-import { nodeScore, scoreLabel } from '@/lib/scores';
+import { nodeScore, nodeScoreBar, scoreLabel } from '@/lib/scores';
 import type { Candidate, Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -415,6 +415,7 @@ export default function LineageTree({
           {layout.nodes.map(({ candidate, x, y, gen, dead }) => {
             const src = assetLink(candidate.asset?.url);
             const shown = nodeScore(candidate);
+            const bar = nodeScoreBar(candidate);
             return (
               <button
                 key={candidate.id}
@@ -447,23 +448,30 @@ export default function LineageTree({
                   )}
                   <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[9px] text-white">r{gen}</span>
                 </span>
-                <span className="flex flex-1 flex-col justify-center gap-0.5 px-2 py-1.5">
+                <span className="flex flex-1 flex-col justify-center gap-1 px-2 py-1.5">
                   <span className="flex items-baseline justify-between gap-1">
                     <span className="truncate text-[11px] text-foreground-lighter">
                       {isCarriedOver(candidate) ? 'copy' : candidate.id.slice(-4)}
                     </span>
-                    {shown.value !== null && (
-                      <span className="text-sm tabular-nums text-foreground">{shown.value}</span>
-                    )}
+                    {bar && <span className="text-sm tabular-nums text-foreground">{bar.score.toFixed(1)}</span>}
                   </span>
-                  <span
-                    className={cn(
-                      'truncate text-[10px]',
-                      shown.value === null ? 'text-foreground-muted/70 italic' : 'text-foreground-muted'
-                    )}
-                  >
-                    {shown.unit}
-                  </span>
+                  {bar ? (
+                    // Fixed 0-100 with the uploaded original ticked, so the only
+                    // rule is that further right is better. A signed delta made
+                    // the reader do arithmetic and collided with element
+                    // verdicts, where a minus sign means the opposite.
+                    <span className="relative block h-1.5 w-full overflow-hidden rounded-full bg-surface-300">
+                      <span className="absolute inset-y-0 left-0 rounded-full bg-brand" style={{ width: `${bar.percent}%` }} />
+                      <span
+                        aria-hidden
+                        className="absolute inset-y-0 w-px bg-foreground/70"
+                        style={{ left: `${bar.parityPercent}%` }}
+                        title="Your original"
+                      />
+                    </span>
+                  ) : (
+                    <span className="truncate text-[10px] italic text-foreground-muted/70">{shown.unit}</span>
+                  )}
                 </span>
               </button>
             );

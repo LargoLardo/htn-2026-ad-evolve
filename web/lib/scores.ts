@@ -67,6 +67,26 @@ export function nodeScore(candidate: Candidate): { value: string | null; unit: s
   };
 }
 
+/**
+ * The score as a position on a fixed 0-100 scale, with the original marked.
+ *
+ * A delta ("-46.4 vs original") asks the reader to know that parity is 50 and
+ * that down is worse, and it puts a minus sign next to element verdicts where
+ * a minus sign means the opposite. A bar with the original ticked needs no
+ * explanation at all: further right is better, and you can see where the ad
+ * you uploaded sits.
+ */
+export function nodeScoreBar(candidate: Candidate): { score: number; percent: number; parityPercent: number } | null {
+  if (!hasNeural(candidate)) return null;
+  const score = candidate.scores?.neural?.engagementScore;
+  if (typeof score !== 'number' || !Number.isFinite(score)) return null;
+  return {
+    score,
+    percent: Math.max(0, Math.min(100, score)),
+    parityPercent: PERCEPT_PARITY,
+  };
+}
+
 export const scoreLabel = (candidate: Candidate) => hasNeural(candidate)
   ? 'Percept vs original' : candidate.scores?.review ? 'Media review only' : 'Historical score';
 

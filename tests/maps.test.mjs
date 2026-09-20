@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, cells, disagreements, gap, impactNotes, normalize, reduceToGrid, scoreElements, windows } from '../lib/grid.mjs';
+import { cells, disagreements, gap, impactNotes, normalize, reduceToGrid, scoreElements, toPixels } from '../lib/grid.mjs';
 
 test('cells tile the image exactly, including sizes the grid does not divide', () => {
   for (const [width, height, n] of [[1024, 1024, 3], [1000, 777, 3], [999, 1001, 5], [512, 512, 4]]) {
@@ -39,42 +39,7 @@ test('the two maps must share a grid before they can be differenced', () => {
   assert.throws(() => gap([1, 2, 3], [1, 2]), /same grid/);
 });
 
-test('a sliding occluder buys resolution without buying GPU passes', () => {
-  const region = windows(800, 800, 8, 3);
-  // (8 - 3 + 1)^2 positions, not 8^2: resolution is decoupled from cost.
-  assert.equal(region.length, 36);
-  for (const w of region) {
-    assert.equal(w.covers.length, 9);
-    // Each occluder hides a ninth of the ad, not a sixty-fourth, so the Percept
-    // delta stays above the run-to-run noise at 8x8.
-    assert.ok(w.w * w.h > 800 * 800 * 0.1, 'occluder is large enough to move the score');
-  }
-  // Every cell is measured by at least one window, or its value is invented.
-  const seen = new Set(region.flatMap(w => w.covers));
-  assert.equal(seen.size, 64);
-});
 
-test('accumulate localises a signal finer than the occluder that measured it', () => {
-  const region = windows(800, 800, 8, 3);
-  // Only the windows covering cell 27 register a response.
-  const deltas = region.map(w => (w.covers.includes(27) ? 1 : 0));
-  const map = accumulate(deltas, region, 64);
-  const peak = map.indexOf(Math.max(...map));
-  assert.equal(peak, 27, 'the peak lands on the responsible cell, not the window centre');
-  assert.ok(map[27] > map[26] && map[27] > map[19], 'neighbours are dimmer than the peak');
-  assert.equal(map[0], 0, 'a far corner stays cold');
-});
-
-test('edge cells are scaled by their real coverage, not the window area', () => {
-  const region = windows(300, 300, 3, 2);
-  // Every window sees the same response, so every cell must read the same.
-  const map = accumulate(region.map(() => 2), region, 9);
-  assert.ok(map.every(value => Math.abs(value - 2) < 1e-12), 'corners must not darken');
-});
-
-test('an occluder wider than the grid is rejected rather than silently clamped', () => {
-  assert.throws(() => windows(300, 300, 3, 4), /Occluder/);
-});
 
 test('an element scores from the cells it covers, weighted by overlap', () => {
   // 300x300 on a 3x3 grid: cells are 100x100.
@@ -105,4 +70,15 @@ test('impact notes name what to stop repeating and what to keep', () => {
   // Silence when there is nothing measured to say, rather than an empty preamble.
   assert.equal(impactNotes([{ label: 'only one', gap: 0.9 }]), '');
   assert.equal(impactNotes([{ label: 'a', gap: 0.01 }, { label: 'b', gap: -0.02 }]), '');
+});
+
+test('a fractional box becomes a pixel rect that stays inside the image', () => {
+  const box = toPixels({ x: 0.25, y: 0.5, w: 0.5, h: 0.25 }, 1024, 1318);
+  assert.deepEqual([box.x, box.y, box.w, box.h], [256, 659, 512, 330]);
+  // A box that starts inside and runs past the edge is common and harmless.
+  // Drawing past the edge is not, so it is clamped rather than rejected.
+  const over = toPixels({ x: 0.9, y: 0.9, w: 0.5, h: 0.5 }, 100, 100);
+  assert.ok(over.x + over.w <= 100 && over.y + over.h <= 100, 'stays within the image');
+  // The fractions survive so the artifact can be drawn at any display size.
+  assert.equal(box.fw, 0.5);
 });
