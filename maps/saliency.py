@@ -112,8 +112,11 @@ def main():
     parser.add_argument("--heatmap", help="Optional greyscale PNG output path.")
     args = parser.parse_args()
 
-    if not 2 <= args.grid <= 8:
-        raise SystemExit("--grid must be between 2 and 8")
+    # Matches MAX_GRID in lib/grid.mjs. The attention grid is only a sampling
+    # resolution for a continuous density and costs no GPU, so it runs finer
+    # than the old occlusion grid ever did.
+    if not 2 <= args.grid <= 16:
+        raise SystemExit("--grid must be between 2 and 16")
 
     # CPU rather than MPS on Apple silicon, deliberately.
     #
