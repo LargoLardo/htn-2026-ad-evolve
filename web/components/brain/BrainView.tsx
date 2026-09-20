@@ -10,10 +10,10 @@ import BrainCanvas, { MAX_PARCELS } from './BrainCanvas';
 /** Family order and colours match the scoring worker, so the surface, the
  *  legend and the traces all name the same four families. */
 const FAMILIES = [
-  { key: 'auditory_engagement', color: '#ffb13b' },
-  { key: 'language_message', color: '#ff5a7a' },
-  { key: 'attention_salience', color: '#9b8cff' },
-  { key: 'visual_motion', color: '#3fd6c0' },
+  { key: 'auditory_engagement', label: 'Engagement', color: '#ffb13b' },
+  { key: 'language_message', label: 'Message', color: '#ff5a7a' },
+  { key: 'attention_salience', label: 'Attention', color: '#9b8cff' },
+  { key: 'visual_motion', label: 'Visual', color: '#3fd6c0' },
 ] as const;
 
 const CHART = { width: 960, height: 200, left: 44, right: 56, top: 18, bottom: 28 };
@@ -72,7 +72,7 @@ export default function BrainView({ run }: { run: Run }) {
       const region = neural.regions?.find((item) => item.key === family.key);
       return {
         key: family.key,
-        name: region?.name ?? family.key.replace(/_/g, ' '),
+        name: region?.name ?? family.label,
         score: region?.score ?? PARITY,
         color: familyColor(family.key, region?.color),
         values: region?.values ?? [],

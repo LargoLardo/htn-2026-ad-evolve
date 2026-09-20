@@ -11,11 +11,11 @@ import { cn } from '@/lib/utils';
  *  complex, so on a silent still they sit at parity and read as flat. They are
  *  offered, not defaulted to. */
 const IMPACT_METRICS = [
-  { key: 'attention_salience', label: 'Attention + salience' },
-  { key: 'language_message', label: 'Language / message' },
-  { key: 'engagement', label: 'Overall engagement' },
-  { key: 'visual_motion', label: 'Visual / motion' },
-  { key: 'auditory_engagement', label: 'Auditory' },
+  { key: 'attention_salience', label: 'Attention' },
+  { key: 'language_message', label: 'Message' },
+  { key: 'engagement', label: 'Overall' },
+  { key: 'visual_motion', label: 'Visual' },
+  { key: 'auditory_engagement', label: 'Engagement' },
 ] as const;
 
 type Layer = 'attention' | 'impact' | 'gap';
