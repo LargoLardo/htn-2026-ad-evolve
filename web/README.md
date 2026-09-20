@@ -4,6 +4,8 @@ The Next.js interface is the only frontend. It retains Advolve branding, light/d
 
 Start the API from the repository root with `npm start` (port 3000). In this directory, run `npm ci`, then `npm run dev` (port 3001). Open http://127.0.0.1:3001.
 
+Local hosting uses the Node backend and filesystem storage without Cloudflare credentials. Follow [the local hosting guide](../docs/LOCAL_HOSTING.md) for provider keys, FFmpeg and optional attention maps. Local runs evolve automatically; the manual round gates appear only with the Cloudflare backend.
+
 For production: `npm run build`, then `npm start`. The API must run separately. Both default servers bind to loopback. `EVOLVE_API_ORIGIN` overrides the API address; use the same setting for build and start because asset rewrites are built into Next.js configuration.
 
 `/api/*` uses a route handler that checks the browser origin before forwarding to the local backend. It preserves binary uploads, enforces the backend body limits, and retains export filenames. `/assets/*` proxies media with byte-range support for video seeking.

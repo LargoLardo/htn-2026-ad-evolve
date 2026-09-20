@@ -6,7 +6,7 @@ account-scoped storage, resumable round gates and optional per-round feedback.
 The hosted image and video runs and live media service are validated. Workers
 Paid activation is still needed for general production workloads; see that
 document for test coverage, limitations and timings. The Node path below
-continues to work locally.
+continues to work locally; see [LOCAL_HOSTING.md](LOCAL_HOSTING.md).
 
 Start here. Two people can work in parallel from this point:
 
@@ -28,16 +28,17 @@ here is the loop: measure, steer, repeat.
 ## Running it
 
 ```sh
-set -a && . ./.env && set +a && node server.mjs   # API on :3000
-cd web && npm run dev                              # UI on :3001
+npm start                     # API on :3000; loads .env automatically
+npm run dev --prefix web       # UI on :3001, in a separate terminal
 
 npm test          # Node regression suite, from the repo root
-cd web && npm run build
+npm run build --prefix web
 ```
 
 `.env` needs `OPENAI_API_KEY`, `BASETEN_API_KEY` and `BASETEN_TRIBE_ENDPOINT`.
-**The API server does not load `.env` itself.** Start it with the `set -a`
-line above or every provider silently reports as not configured.
+Add `PIKA_API_KEY` for video generation. `npm start` and `npm run dev` load
+`.env` automatically. If invoking `node server.mjs` directly, export the
+variables yourself or use `node --env-file-if-exists=.env server.mjs`.
 
 ## The one result worth knowing
 

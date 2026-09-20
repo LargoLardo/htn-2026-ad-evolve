@@ -31,7 +31,7 @@ Describe your product, and Advolve runs a full evolutionary loop over your ad cr
 - **Automated Review**: Reviews actual pixels, copy, product visibility, claims and brief alignment. Video review samples six frames and transcribes audio with Whisper.
 - **Neural Scoring**: Shortlisted takes are scored by TRIBE, a neuroscience model that predicts cortical response across four Glasser parcel families.
 - **Selection and Breeding**: Ranks takes by neural score, retains the winner, applies crossover and single-gene mutation to produce the next generation.
-- **Manual Gates**: Optionally pause between rounds to hand-pick parents, kill weak nodes and edit the brief before the next generation breeds.
+- **Manual Gates (Cloudflare)**: Optionally pause between rounds to hand-pick parents, kill weak nodes and edit the brief before the next generation breeds. Local Node runs select parents automatically.
 
 ### Brain Visualizer
 
@@ -92,27 +92,37 @@ Original ad image
   -> Gap = where people look vs. what actually matters
 ```
 
-## Quick Start
+## Run Locally
+
+Local hosting remains supported alongside Cloudflare. Install Node.js 22.9+
+and FFmpeg, then run the API and UI below. No Cloudflare account, Wrangler,
+R2 or Access setup is required. Generation and neural scoring still call your
+configured AI providers; local hosting does not mean offline inference.
+
+See [the local hosting guide](docs/LOCAL_HOSTING.md) for production startup,
+storage, optional attention maps and troubleshooting. To host on Cloudflare,
+use [the Cloudflare deployment guide](docs/CLOUDFLARE_DEPLOY.md).
 
 ```bash
-# 1. Install (backend has zero npm deps)
-npm install
-cd web && npm install && cd ..
+# 1. Install frontend dependencies (backend has zero npm deps)
+npm ci --prefix web
 
 # 2. Configure environment
 cp .env.example .env
-# Set OPENAI_API_KEY (minimum for image generation and review)
+# Set OPENAI_API_KEY for research, image generation and review
 # Set PIKA_API_KEY for video generation
 # Set BASETEN_TRIBE_ENDPOINT + BASETEN_API_KEY for neural scoring
 
-# 3. Start backend
-npm run dev          # API on localhost:3000
+# 3. Start backend; automatically loads .env
+npm start                 # API on 127.0.0.1:3000
 
 # 4. Start frontend (separate terminal)
-npm run dev --prefix web   # UI on localhost:3001
+npm run dev --prefix web   # UI on 127.0.0.1:3001
 ```
 
-Open http://localhost:3001. The Next.js frontend proxies API requests to the backend.
+Open http://127.0.0.1:3001. The Next.js frontend proxies API requests to the backend.
+Keep both processes running until your runs finish. Use `npm run dev` instead
+of `npm start` for backend development with automatic restarts.
 
 ## Environment Variables
 

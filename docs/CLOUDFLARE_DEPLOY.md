@@ -1,6 +1,7 @@
 # Cloudflare deployment
 
-The implementation is in `cloudflare/`; Node local development still works.
+The implementation is in `cloudflare/`; [local Node hosting](LOCAL_HOSTING.md)
+is also supported, with its own API, filesystem storage and startup commands.
 The Next app builds with OpenNext. Its Worker forwards API, SSE and media
 requests to a private API Worker through a service binding.
 
