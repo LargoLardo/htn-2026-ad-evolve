@@ -82,16 +82,20 @@ test('one fixed baseline, bounded batches and duplicate-media reuse', async t =>
   for (const color of ['red', 'blue', 'green', 'yellow', 'purple']) candidates.push(await candidate(color, `${color}.png`));
   candidates.push({ ...candidates[0], id: 'same-media' });
   const first = await scoreTribe(candidates, brief);
-  assert.deepEqual(sizes, [1, 4]);
-  assert.deepEqual(references, [undefined, first.baseline.hash]);
+  // One stimulus per request. The worker scores a batch serially, so a larger
+  // batch multiplies one inference by the batch size and the gateway closes
+  // the connection before it answers.
+  assert.ok(sizes.every(size => size === 1), `every request carries one stimulus, saw ${sizes}`);
+  assert.equal(sizes.length, 5, 'the baseline plus one request per distinct medium');
+  assert.deepEqual(references, [undefined, ...Array(4).fill(first.baseline.hash)]);
   assert.equal(first.results.length, 6);
   assert.equal(first.results.at(-1).cached, true);
   assert.ok(first.results.every(r => r.neural.baselineHash === first.baseline.hash));
   const otherBaseline = baselineFor(candidates[1].asset.mediaHash);
   await scoreTribe([candidates[0]], brief, { baseline: otherBaseline });
-  assert.equal(sizes.length, 3, 'a different original cannot reuse a score from the first original');
+  assert.equal(sizes.length, 6, 'a different original cannot reuse a score from the first original');
   await scoreTribe([candidates[0]], brief, { baseline: otherBaseline });
-  assert.equal(sizes.length, 3);
+  assert.equal(sizes.length, 6);
 });
 
 test('video payloads are bounded to one clip per worker request', async t => {
