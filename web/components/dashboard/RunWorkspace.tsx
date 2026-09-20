@@ -59,7 +59,17 @@ const clamp = (value?: number | null) =>
   Math.min(100, Math.max(0, typeof value === 'number' && Number.isFinite(value) ? value : 0));
 
 // Keep short cached runs readable without rounding away their duration.
-const elapsed = (ms: number) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`);
+// Runs are minutes long, not seconds: a single Percept pass alone is about two
+// minutes. Reporting 1520.5s for a 25 minute run is accurate and unreadable,
+// so past a minute this switches to minutes and past an hour to hours.
+const elapsed = (ms: number) => {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const seconds = ms / 1000;
+  if (seconds < 90) return `${seconds.toFixed(1)}s`;
+  const minutes = seconds / 60;
+  if (minutes < 90) return `${minutes.toFixed(1)} min`;
+  return `${Math.floor(minutes / 60)}h ${Math.round(minutes % 60)}m`;
+};
 
 export default function RunWorkspace({
   run,
