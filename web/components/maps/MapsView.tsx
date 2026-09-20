@@ -33,16 +33,49 @@ const normalize = (values: number[]) => {
 };
 
 export default function MapsView({ run }: { run: Run }) {
-  const original = run.brief.originalAsset;
+  const [available, setAvailable] = useState<string[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
   const [data, setData] = useState<MapsArtifact | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [layer, setLayer] = useState<Layer>('gap');
   const [metric, setMetric] = useState<string>('attention_salience');
 
+  /** Every still in the run that could have maps: the uploaded original first,
+   *  then finalists, then everything else. Most runs have no uploaded original,
+   *  so restricting this to brief.originalAsset would show an empty tab. */
+  const mappable = useMemo(() => {
+    const seen = new Map<string, { hash: string; url: string; label: string }>();
+    const add = (asset: { url?: string; mediaHash?: string; mediaType?: string } | null | undefined, label: string) => {
+      if (!asset?.mediaHash || !asset.url || asset.mediaType === 'video') return;
+      if (!seen.has(asset.mediaHash)) seen.set(asset.mediaHash, { hash: asset.mediaHash, url: asset.url, label });
+    };
+    add(run.brief.originalAsset, 'Uploaded original');
+    run.finalists.forEach((c, i) => add(c.asset, `Finalist ${i + 1}`));
+    run.rounds.forEach(r => r.candidates.forEach(c => add(c.asset, `Gen ${r.number} · ${c.id.slice(-4)}`)));
+    return [...seen.values()];
+  }, [run]);
+
   useEffect(() => {
-    if (!original?.mediaHash) return;
     let live = true;
-    fetch(`/api/maps/${original.mediaHash}`)
+    fetch('/api/maps')
+      .then(r => r.json())
+      .then(list => live && setAvailable(Array.isArray(list) ? list : []))
+      .catch(() => live && setAvailable([]));
+    return () => { live = false; };
+  }, []);
+
+  const options = useMemo(
+    () => (available ? mappable.filter(item => available.includes(item.hash)) : []),
+    [available, mappable]
+  );
+
+  useEffect(() => { if (!chosen && options.length) setChosen(options[0].hash); }, [chosen, options]);
+
+  useEffect(() => {
+    if (!chosen) return;
+    let live = true;
+    setData(null); setError(null);
+    fetch(`/api/maps/${chosen}`)
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error ?? 'Maps unavailable.');
@@ -51,9 +84,10 @@ export default function MapsView({ run }: { run: Run }) {
       .then(body => live && setData(body))
       .catch(caught => live && setError(caught.message));
     return () => { live = false; };
-  }, [original?.mediaHash]);
+  }, [chosen]);
 
-  const src = assetLink(original?.url);
+  const current = options.find(item => item.hash === chosen);
+  const src = assetLink(current?.url);
 
   const values = useMemo(() => {
     if (!data) return null;
@@ -70,8 +104,14 @@ export default function MapsView({ run }: { run: Run }) {
     return diff.map(v => v / scale);
   }, [data, layer, metric]);
 
-  if (!original) return <Empty>This run has no uploaded original, so there is nothing to map.</Empty>;
-  if (error) return <Empty>{error} Build one with <code>node scripts/build-demo-maps.mjs --image …</code></Empty>;
+  if (available === null) return <Empty>Looking for precomputed maps…</Empty>;
+  if (!options.length) return (
+    <Empty>
+      No precomputed maps for any image in this run. Build one with{' '}
+      <code>node scripts/build-demo-maps.mjs --image data/assets/&lt;hash&gt;.png</code>
+    </Empty>
+  );
+  if (error) return <Empty>{error}</Empty>;
   if (!data || !values) return <Empty>Loading maps…</Empty>;
 
   const grid = data.grid;
@@ -95,6 +135,17 @@ export default function MapsView({ run }: { run: Run }) {
             {name === 'gap' ? 'The gap' : name}
           </button>
         ))}
+
+        {options.length > 1 && (
+          <select
+            aria-label="Image to map"
+            value={chosen ?? ''}
+            onChange={event => setChosen(event.target.value)}
+            className="rounded-md border border-border-control bg-control px-2 py-1.5 text-xs text-foreground"
+          >
+            {options.map(item => <option key={item.hash} value={item.hash}>{item.label}</option>)}
+          </select>
+        )}
 
         {layer !== 'attention' && hasImpact && (
           <select

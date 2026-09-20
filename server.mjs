@@ -76,6 +76,14 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
       // Precomputed attention/impact maps for one uploaded image, keyed by its
       // media hash. Built offline by scripts/build-demo-maps.mjs because a 3x3
       // impact map is ten GPU passes and must not be paid for during a demo.
+      // Which media already has precomputed maps. The UI needs this to offer a
+      // picker; probing every candidate image with a 404 would be worse.
+      if (request.method === 'GET' && pathname === '/api/maps') {
+        try {
+          const names = await readdir(process.env.EVOLVE_MAPS_DIR || 'data/maps');
+          return json(response, 200, names.flatMap(name => name.match(/^([a-f0-9]{64})-maps\.json$/)?.[1] ?? []));
+        } catch { return json(response, 200, []); }
+      }
       if (request.method === 'GET' && /^\/api\/maps\/[a-f0-9]{64}$/.test(pathname)) {
         try { return json(response, 200, JSON.parse(await readFile(mapsPath(pathname.split('/').at(-1)), 'utf8'))); }
         catch { return json(response, 404, { error: 'No precomputed maps for this media.' }); }

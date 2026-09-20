@@ -8,7 +8,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
-import { ingestMedia } from '../lib/media.mjs';
+import { getUploadedAsset, ingestMedia } from '../lib/media.mjs';
 import { buildMaps } from '../lib/maps.mjs';
 import { DEFAULT_GRID } from '../lib/grid.mjs';
 
@@ -20,8 +20,20 @@ if (!imagePath) { console.error('Usage: node scripts/build-demo-maps.mjs --image
 const grid = Number(flag('grid', String(DEFAULT_GRID)));
 const outDir = flag('out', 'data/maps');
 
-const mime = /\.jpe?g$/i.test(imagePath) ? 'image/jpeg' : /\.webp$/i.test(imagePath) ? 'image/webp' : 'image/png';
-const asset = await ingestMedia(await readFile(imagePath), mime, { kind: 'demo-map-input' });
+// Reuse the asset if this file is already one, rather than re-ingesting it.
+//
+// ingestMedia re-encodes to rgb24, which changes the bytes and therefore the
+// content hash. Re-ingesting an existing asset would key the maps to a hash no
+// run candidate has, and the UI would never find them.
+const existing = imagePath.match(/([a-f0-9]{64})\.(png|jpe?g|webp)$/i)?.[1];
+let asset;
+if (existing) {
+  asset = await getUploadedAsset(existing).catch(() => null);
+}
+if (!asset) {
+  const mime = /\.jpe?g$/i.test(imagePath) ? 'image/jpeg' : /\.webp$/i.test(imagePath) ? 'image/webp' : 'image/png';
+  asset = await ingestMedia(await readFile(imagePath), mime, { kind: 'demo-map-input' });
+}
 await mkdir(outDir, { recursive: true });
 
 const started = Date.now();
