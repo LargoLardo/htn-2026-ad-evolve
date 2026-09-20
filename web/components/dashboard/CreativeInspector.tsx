@@ -43,7 +43,7 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           {candidate.provisional && <p role="status" className="text-sm text-destructive">Provisional draft — failed review checks remain unresolved.</p>}
         </div>
         <div className="flex flex-col gap-2">
-          <h3 className="label">Creative genome</h3>
+          <h3 className="label">Traits</h3>
           <dl className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-1 text-sm">{Object.entries(candidate.genome).map(([key, value]) => <div key={key} className="contents"><dt className={cn('text-foreground-muted', key !== 'cta' && 'capitalize')}>{key === 'cta' ? 'CTA' : key}</dt><dd className="text-foreground-light">{value}</dd></div>)}</dl>
         </div>
         <h3 className="label" title={scoreDisplay(candidate).title}>{scoreLabel(candidate)} · {scoreDisplay(candidate).value} {scoreDisplay(candidate).unit}</h3>

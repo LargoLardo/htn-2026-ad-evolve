@@ -18,7 +18,9 @@ import { cn } from '@/lib/utils';
  */
 
 const NODE_W = 150;
-const NODE_H = 186;
+// Square thumbnail at NODE_W, plus two lines of label. At 186 the second line
+// was clipped, so "vs original" and "not scored" were cut in half.
+const NODE_H = 206;
 const GAP_X = 30;
 const GAP_Y = 88;
 
@@ -282,11 +284,11 @@ export default function LineageTree({
       <div className="flex flex-wrap items-center gap-4 text-xs text-foreground-lighter">
         <span className="flex items-center gap-1.5">
           <svg width="22" height="8" aria-hidden><line x1="0" y1="4" x2="22" y2="4" stroke="currentColor" strokeWidth="1.5" /></svg>
-          new creative
+          mixed from two parents
         </span>
         <span className="flex items-center gap-1.5">
           <svg width="22" height="8" aria-hidden><line x1="0" y1="4" x2="22" y2="4" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" /></svg>
-          elite carried over unchanged
+          carried forward unchanged
         </span>
         <span className="flex items-center gap-1.5">
           <svg width="24" height="14" aria-hidden>
@@ -295,20 +297,20 @@ export default function LineageTree({
             <line x1="12" y1="8" x2="12" y2="13" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="12" cy="8" r="2" fill="currentColor" />
           </svg>
-          two parents crossed into one child
+          where two parents meet
         </span>
         {layout.nodes.some(node => node.dead) && (
           <span className="flex items-center gap-1.5 opacity-40">
             <span aria-hidden className="size-3 rounded-sm border border-current" />
-            not bred from
+            no children
           </span>
         )}
         {carried > 0 && (
           <span className="text-foreground-light">
-            {carried} of {layout.links.length} descendants are copies, not new creatives.
+            {carried} of {layout.links.length} nodes in this run are copies.
           </span>
         )}
-        <span className="ml-auto">Hover a creative to isolate its lineage.</span>
+        <span className="ml-auto">Hover a node to trace where it came from.</span>
       </div>
 
       <div className="relative overflow-hidden rounded-lg border border-border bg-surface-75">
@@ -443,7 +445,7 @@ export default function LineageTree({
                       not rendered
                     </span>
                   )}
-                  <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[9px] text-white">g{gen}</span>
+                  <span className="absolute left-1 top-1 rounded bg-black/70 px-1 text-[9px] text-white">r{gen}</span>
                 </span>
                 <span className="flex flex-1 flex-col justify-center gap-0.5 px-2 py-1.5">
                   <span className="flex items-baseline justify-between gap-1">
