@@ -27,7 +27,7 @@ const STAGE_TEXT: Record<RunStage, string> = {
   failed: 'Run failed.',
 };
 
-const TABS = ['candidates', 'lineage', 'brain', 'maps', 'research', 'log'] as const;
+const TABS = ['lineage', 'brain', 'maps', 'research', 'log'] as const;
 type Tab = (typeof TABS)[number];
 
 // The maps tab fetches a precomputed artifact, so it is not worth loading until
@@ -70,22 +70,13 @@ export default function RunWorkspace({
   running: boolean;
   onCancel: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>('candidates');
-  const [selectedRound, setSelectedRound] = useState<string>('latest');
+  const [tab, setTab] = useState<Tab>('lineage');
   const [inspecting, setInspecting] = useState<Candidate | null>(null);
 
   const allCandidates = useMemo(
     () => run.rounds.flatMap((round) => round.candidates),
     [run.rounds]
   );
-
-  const shown = useMemo(() => {
-    if (selectedRound === 'final' && run.finalists.length) return run.finalists;
-    if (selectedRound === 'latest' || selectedRound === 'final') {
-      return run.finalists.length ? run.finalists : (run.rounds.at(-1)?.candidates ?? []);
-    }
-    return run.rounds.find((r) => String(r.number) === selectedRound)?.candidates ?? [];
-  }, [run, selectedRound]);
 
   const progress = Math.min(96, 5 + (run.rounds.length / Math.max(1, run.brief.rounds)) * 85);
 
@@ -170,45 +161,21 @@ export default function RunWorkspace({
         </span>
       </div>
 
-      {tab === 'candidates' && (
+      {/* One tab, not two. The tree already shows every candidate with its
+          score and opens the same inspector on click, so a parallel grid of the
+          same creatives filtered by generation was a second answer to a
+          question the tree answers better: it shows WHICH parent each one came
+          from, which the grid could never say. */}
+      {tab === 'lineage' && (
         <>
-          <div className="flex flex-wrap gap-1.5">
-            {run.finalists.length > 0 && (
-              <RoundChip active={selectedRound === 'final'} onClick={() => setSelectedRound('final')}>
-                {run.requiresReview ? 'Provisional drafts' : 'Finalists'}
-              </RoundChip>
-            )}
-            {run.rounds.map((round) => (
-              <RoundChip
-                key={round.number}
-                active={selectedRound === String(round.number)}
-                onClick={() => setSelectedRound(String(round.number))}
-              >
-                Gen {round.number}
-              </RoundChip>
-            ))}
-          </div>
-
-          {shown.length === 0 ? (
-            <Waiting running={running} text="No candidates in this generation yet." />
+          {allCandidates.length === 0 ? (
+            <Waiting running={running} text="No candidates yet." />
           ) : (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {[...shown].sort(compareCandidates).map((candidate, index) => (
-                <CreativeCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  rank={index + 1}
-                  onClick={() => setInspecting(candidate)}
-                />
-              ))}
-            </div>
+            <LineageTree run={run} onInspect={setInspecting} />
           )}
-
           <FitnessChart run={run} />
         </>
       )}
-
-      {tab === 'lineage' && <LineageTree run={run} onInspect={setInspecting} />}
 
       {tab === 'brain' && <BrainView run={run} />}
 
@@ -280,66 +247,11 @@ export default function RunWorkspace({
   );
 }
 
-function RoundChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'focus-ring rounded-md border px-2.5 py-1 text-xs transition-colors',
-        active
-          ? 'border-brand-400 bg-brand-200 text-foreground'
-          : 'border-border bg-surface-100 text-foreground-lighter hover:text-foreground'
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Waiting({ running, text }: { running: boolean; text: string }) {
   return (
     <div className="rounded-lg border border-dashed border-border px-5 py-10 text-center text-sm text-foreground-lighter">
       {running ? 'Working…' : text}
     </div>
-  );
-}
-
-function CreativeCard({
-  candidate,
-  rank,
-  onClick,
-}: {
-  candidate: Candidate;
-  rank: number;
-  onClick: () => void;
-}) {
-  const src = assetLink(candidate.asset?.url);
-  return (
-    <Panel className="h-full">
-      <div className="flex h-full w-full flex-col text-left" data-candidate-id={candidate.id}>
-        <div className="relative aspect-square w-full overflow-hidden bg-surface-200">
-          {src ? <MediaPreview asset={candidate.asset} title={candidate.headline} className="size-full object-contain" /> : <span className="absolute inset-0 grid place-items-center px-3 text-center text-xs text-foreground-muted">Awaiting media</span>}
-          <span className="pointer-events-none absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white">
-            {candidate.provisional ? 'PROVISIONAL · NEEDS REVIEW' : candidate.original ? 'ORIGINAL' : rank}
-          </span>
-        </div>
-        <button onClick={onClick} className="focus-ring flex flex-1 flex-col gap-1 p-3 text-left" aria-label={`Inspect ${candidate.headline}`}>
-          <p className="line-clamp-2 text-sm text-foreground">{candidate.headline}</p>
-          <div className="mt-auto flex w-full items-center justify-between gap-2 pt-1">
-            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">{scoreDisplay(candidate).unit}</span>
-            <span className="text-sm tabular-nums text-foreground" title={scoreDisplay(candidate).title}>{scoreDisplay(candidate).value}</span>
-          </div>
-        </button>
-      </div>
-    </Panel>
   );
 }
 
