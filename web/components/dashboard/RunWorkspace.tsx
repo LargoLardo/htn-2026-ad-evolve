@@ -6,6 +6,7 @@ import { Download } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import CreativeInspector from './CreativeInspector';
+import LineageTree from './LineageTree';
 import { assetLink, exportHref, safeLink } from '@/lib/api';
 import { type Candidate, type Run, type RunStage } from '@/lib/types';
 import MediaPreview from './MediaPreview';
@@ -207,37 +208,7 @@ export default function RunWorkspace({
         </>
       )}
 
-      {tab === 'lineage' && (
-        <div className="flex flex-col gap-5">
-          {run.rounds.map((round) => (
-            <section key={round.number} className="flex flex-col gap-2">
-              <h3 className="label">Generation {round.number}</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {round.candidates.map((candidate) => (
-                  <button
-                    key={candidate.id}
-                    onClick={() => setInspecting(candidate)}
-                    className={cn(
-                      'focus-ring rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors',
-                      candidate.selected
-                        ? 'border-brand-400 bg-brand-200 text-foreground'
-                        : 'border-border bg-surface-100 text-foreground-lighter hover:text-foreground'
-                    )}
-                  >
-                    <span className="tabular-nums">{candidate.id}</span>
-                    <span className="ml-2 tabular-nums">{score(selectionScore(candidate))}</span>
-                    {candidate.parents.length > 0 && (
-                      <span className="ml-2 text-foreground-muted">
-                        ← {candidate.parents.join(', ')}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+      {tab === 'lineage' && <LineageTree run={run} onInspect={setInspecting} />}
 
       {tab === 'brain' && <BrainView run={run} />}
 
