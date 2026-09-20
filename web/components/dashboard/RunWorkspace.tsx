@@ -135,7 +135,7 @@ export default function RunWorkspace({
       </div>
 
       <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
-        {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative. Highest neural score wins among reviewed takes. Predicted cortical response, not validated emotion or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}
+        {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative, where 50 is parity with it. This is the magnitude of the predicted cortical response, and selection currently takes the largest. A larger response is not evidence of a better ad: a cluttered original with a wall of body text scores highly because it is taxing to read. Predicted response only, not measured emotion, engagement or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}
         {run.requiresReview && ' No drafts passed review. The retained provisional drafts need review and revision.'}
       </p>
 
