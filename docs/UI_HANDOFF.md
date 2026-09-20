@@ -118,9 +118,9 @@ width and height, not by `width`/`height` from the artifact.
 
 - **Half the nodes say `not scored`.** Only the shortlist reaches the GPU,
   because a Percept pass costs about two minutes. This is intended to change.
-- **Scores are negative.** 50 is parity with the uploaded original, so a clean
-  ad scoring below a cluttered original is expected. The metric is response
-  magnitude, not quality.
+- **Ads score below the original.** The node bar is 0-100 with the uploaded
+  original ticked at 50, and a clean ad landing left of that tick is expected.
+  The metric is response magnitude, and clutter maximises it.
 - **A child looks nothing like its parents.** Lineage is inheritance of
   traits, and the image is generated from scratch afterwards. No pixels are
   inherited. Every viewer assumes otherwise, so the UI has to say it.

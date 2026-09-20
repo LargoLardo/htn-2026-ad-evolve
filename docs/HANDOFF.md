@@ -142,9 +142,9 @@ per-round feedback.
 
 ## Things that look wrong and are not
 
-- **Scores are negative in older views.** 50 is parity with the uploaded
-  original. A clean ad scoring below a cluttered one is expected: the metric
-  is response magnitude, and clutter maximises it.
+- **Ads score below the uploaded original.** The node bar ticks the original
+  at 50, and a clean ad landing left of it is expected. The metric is response
+  magnitude, and clutter maximises it.
 - **A child looks nothing like its parents.** Inheritance is over eight
   abstract traits, and the image is regenerated from scratch. No pixels are
   inherited.
