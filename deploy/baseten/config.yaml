@@ -8,13 +8,29 @@ system_packages:
   - git
   - libsndfile1
   - libgl1
+build_commands:
+  # WhisperX alignment needs Punkt data. Install a pinned, verified archive
+  # during the build instead of downloading through NLTK inside an inference.
+  - >-
+    python -c 'import hashlib, io, urllib.request, zipfile;
+    data = urllib.request.urlopen("https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip", timeout=60).read();
+    assert hashlib.sha256(data).hexdigest() == "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106", "Punkt archive checksum mismatch";
+    zipfile.ZipFile(io.BytesIO(data)).extractall("/usr/local/share/nltk_data/tokenizers")'
 resources:
-  instance_type: H100
+  # Verified for image/video inference; H100 provisioning stalled in this account.
+  # This L4 profile supplies host RAM for the transcript and visual encoders.
+  instance_type: L4:2x24x96
 runtime:
   predict_concurrency: 1
 secrets:
   hf_access_token: null
 environment_variables:
+  # Baseten runs inference without write access to /root. TRIBE invokes uvx
+  # WhisperX at inference time, so its package and model caches must be writable.
+  UV_CACHE_DIR: /tmp/evolve-uv
+  XDG_CACHE_HOME: /tmp/evolve-cache
+  XDG_DATA_HOME: /tmp/evolve-data
+  NLTK_DATA: /usr/local/share/nltk_data
   HF_HOME: /tmp/evolve-huggingface
   HF_XET_CACHE: /tmp/evolve-huggingface/xet
   TRIBE_CACHE_DIR: /tmp/evolve-tribe

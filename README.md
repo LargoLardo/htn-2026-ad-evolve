@@ -23,7 +23,7 @@ Open http://127.0.0.1:3001. The Next.js interface proxies API requests and media
 
 Set `OPENAI_API_KEY` for research, images and review, `PIKA_API_KEY` for video generation, and `BASETEN_TRIBE_ENDPOINT` / `BASETEN_API_KEY` for neural scoring. Alternatively, `TRIBE_SCORE_URL` / `TRIBE_TOKEN` can address a worker implementing the same JSON contract. `FFMPEG_BIN` can override the FFmpeg executable. Configuration indicators only check settings; they do not wake a GPU or validate credentials.
 
-**The GPU worker must be updated before live runs.** This change prepares the worker source; it does not deploy it, start model downloads or resume training. Older pooled-feature endpoints cannot provide these scores. See [worker setup and scoring](worker/README.md).
+**Live runs require the matching GPU worker.** The Percept worker has been verified with real image and video inference on Baseten's `L4:2x24x96` instance. Configure the app with an endpoint deployed from this source; older pooled-feature endpoints cannot provide these scores. Experimental decoder training remains paused. See [worker setup and scoring](worker/README.md).
 
 ## Evolution loop
 
