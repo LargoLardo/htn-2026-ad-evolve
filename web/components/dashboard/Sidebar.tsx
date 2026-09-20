@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Layers, Map as MapIcon, Network, SlidersHorizontal } from 'lucide-react';
+import { Layers, Network, SlidersHorizontal } from 'lucide-react';
 import { BrandMark } from '@/components/layout/BrandMark';
 import { Dialog } from '@/components/ui/dialog';
 import { getConfig, listRuns } from '@/lib/api';
@@ -12,10 +12,7 @@ import { cn } from '@/lib/utils';
 
 // Experiments is the only destination. "Lab" used to be a second entry for the
 // same noun, which made opening a saved run look like leaving the section.
-const NAV = [
-  { href: '/dashboard', label: 'Experiments', icon: Layers },
-  { href: '/dashboard/maps', label: 'Maps', icon: MapIcon },
-];
+const NAV = [{ href: '/dashboard', label: 'Experiments', icon: Layers }];
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -43,9 +40,7 @@ export default function Sidebar() {
 
           {NAV.map(({ href, label, icon: Icon }) => {
             // Any run page is still inside Experiments, so keep it highlighted.
-            const active = href === '/dashboard'
-              ? pathname === href || pathname.startsWith('/dashboard/runs')
-              : pathname.startsWith(href);
+            const active = pathname === href || pathname.startsWith('/dashboard/runs');
             return (
               <Link
                 key={href}
@@ -59,7 +54,7 @@ export default function Sidebar() {
               >
                 <Icon size={17} strokeWidth={1.75} />
                 <span className="max-lg:hidden">{label}</span>
-                {href === '/dashboard' && runs.length > 0 && (
+                {runs.length > 0 && (
                   <span className="ml-auto text-xs text-foreground-lighter max-lg:hidden">
                     {runs.length}
                   </span>
