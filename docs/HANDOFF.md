@@ -82,16 +82,31 @@ and must stay 1.
 
 ## The biggest available speedup, not yet done
 
-TRIBE is a video model, so a still image is inflated into a **10 second video,
-about 250 identical frames**, and every frame is scored. That is the 119
-seconds.
+TRIBE is a video model, so a still image is inflated into a **10 second video**
+and scored frame by frame. That is where the 119 seconds goes.
 
-`lib/media.mjs`: `duration: type === 'image' ? 10 : duration`
+The clip length is **not** in this repo's runtime path. It is hardcoded in the
+worker that runs on Baseten:
 
-A 2 or 3 second clip should be close to a linear saving, roughly 5x. **It has
-not been tested.** Test it against a known 10 second result before trusting
-it, and add it as an environment override rather than changing the constant,
-because changing the stimulus invalidates every score already recorded.
+```python
+# worker/percept_worker.py
+ffmpeg([... , *(['-t', '10'] if media_type == 'image' else []), str(infer_path)])
+```
+
+`lib/media.mjs` also carries `duration: 10` for images, but that is metadata
+only and changing it does nothing. **Shortening the clip requires redeploying
+the worker**, so this is not a local flag and not a five minute experiment.
+
+It is also not free the way a pure frame count would suggest. The model
+predicts one sample per TR, so a 10 second clip yields several samples that get
+averaged, and a 2 second clip may yield one. Fewer samples means a noisier
+estimate, not just a faster one. **3 or 4 seconds is a more defensible first
+attempt than 2**, and whatever is chosen has to be validated against a known
+10 second result on the same image before it is trusted.
+
+Changing the stimulus invalidates every score already recorded, so add it as a
+deployment parameter rather than editing the constant, and expect existing
+baselines to need rebuilding.
 
 Almost everything expensive downstream is gated on this: mapping every
 candidate rather than two, scoring every candidate rather than three, and
