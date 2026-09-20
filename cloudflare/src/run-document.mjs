@@ -30,8 +30,8 @@ export class RunDocument extends DurableObject {
       await this.ctx.storage.put('accountId', accountId);
       run.workflowId = `e-${accountId.slice(0, 16)}-${run.id}`;
       await this.write('initial', run); await this.write('run', run);
-      await indexRun(this.env, accountId, run);
       if (!terminal(run.status)) await this.ctx.storage.setAlarm(Date.now() + 1000);
+      await indexRun(this.env, accountId, run);
       return run;
     });
   }

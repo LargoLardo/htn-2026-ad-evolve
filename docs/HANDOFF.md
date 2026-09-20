@@ -1,5 +1,11 @@
 # Handoff
 
+For the Cloudflare implementation and credential setup, start at
+[CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md). The hosted path now implements
+account-scoped storage, resumable round gates and optional per-round feedback.
+Cloudflare deployment and live media-service validation still require setup;
+the Node path below continues to work locally.
+
 Start here. Two people can work in parallel from this point:
 
 - **UI and UX** works in `web/`. Read [UI_HANDOFF.md](UI_HANDOFF.md).
@@ -23,7 +29,7 @@ here is the loop: measure, steer, repeat.
 set -a && . ./.env && set +a && node server.mjs   # API on :3000
 cd web && npm run dev                              # UI on :3001
 
-npm test          # 41 tests, from the repo root
+npm test          # Node regression suite, from the repo root
 cd web && npm run build
 ```
 

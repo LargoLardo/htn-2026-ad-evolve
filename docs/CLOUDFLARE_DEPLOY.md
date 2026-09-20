@@ -4,6 +4,13 @@ The implementation is in `cloudflare/`; Node local development still works.
 The Next app builds with OpenNext. Its Worker forwards API, SSE and media
 requests to a private API Worker through a service binding.
 
+Local validation on 2026-09-20: 42 Node tests, 13 Cloudflare runtime tests,
+and 2 real FFmpeg media-service tests passed. Both Worker bundles build.
+A browser smoke test exercised the manual gate (including an empty selection),
+and real local service bindings handled image upload and R2 asset retrieval.
+No paid model calls were made during these migration tests. Remote Images
+masking and a full hosted image/video run still require deployment validation.
+
 ## Put credentials here
 
 Use the ignored **`.env.cloudflare` at the repository root** (mode 0600).

@@ -1,5 +1,8 @@
 # Advolve — image and video ad evolution
 
+Cloudflare migration: see [deployment and credential setup](docs/CLOUDFLARE_DEPLOY.md).
+The Worker implementation lives in `cloudflare/`; local Node hosting remains available.
+
 Generate ad takes, review the actual media, then evolve the strongest takes using Percept's published TRIBE scoring method. Images use OpenAI image generation; videos use **Seedance 2.0 through Pika**. Research, concept writing and media review use OpenAI.
 
 ## Run locally

@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "advolve-web",
   "main": "cloudflare-worker.mjs",
+  "keep_names": false,
   "compatibility_date": "2026-08-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
