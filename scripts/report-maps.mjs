@@ -25,10 +25,13 @@ if (!artifacts.length) { console.error(`No map artifacts in ${dir}${wanted ? ` m
 artifacts.sort((a, b) => String(a.builtAt).localeCompare(String(b.builtAt)));
 
 for (const artifact of artifacts) {
-  const { mediaHash, grid, window, label, width, height, elements = [], gap, impact } = artifact;
+  const { mediaHash, grid, label, width, height, elements = [], gap, impact } = artifact;
   console.log(`\n${'='.repeat(72)}`);
-  console.log(`${label ?? 'unlabelled'}  ${mediaHash.slice(0, 12)}  ${width}x${height}  grid ${grid}x${grid}` +
-    (window ? `  occluder ${window}x${window}` : '') + (impact ? `  ${impact.calls} worker calls` : '  attention only'));
+  // Older artifacts measured a grid. Current ones occlude detected elements,
+  // so there is no grid to report and the element count is the real shape.
+  const shape = grid ? `grid ${grid}x${grid}` : `${elements.length} elements`;
+  console.log(`${label ?? 'unlabelled'}  ${mediaHash.slice(0, 12)}  ${width}x${height}  ${shape}` +
+    (impact ? `  ${impact.calls} worker calls` : '  attention only'));
 
   if (!gap) { console.log(`No impact map: ${artifact.impactError ?? 'unknown reason'}`); continue; }
 
