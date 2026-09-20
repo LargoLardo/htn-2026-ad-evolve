@@ -167,6 +167,26 @@ export default function BrainView({ run }: { run: Run }) {
   const select = useCallback((id: string) => setSelectedId(id), []);
   const illustrative = regions.length === 0;
 
+  /** Arrow keys walk the four families; nothing selected starts at either end. */
+  function onCortexKey(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      setFamily(0);
+      return;
+    }
+    let step = 0;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') step = 1;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') step = -1;
+    if (step === 0) return;
+    event.preventDefault();
+    setFamily((current) => {
+      if (current === 0) return step > 0 ? 1 : FAMILIES.length;
+      const next = current + step;
+      if (next < 1) return FAMILIES.length;
+      if (next > FAMILIES.length) return 1;
+      return next;
+    });
+  }
+
   const detail = family > 0 ? manifest?.families.find((item) => item.index === family) : undefined;
   const detailRegion = family > 0 ? regions[family - 1] : undefined;
 
@@ -183,7 +203,16 @@ export default function BrainView({ run }: { run: Run }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="relative h-[520px] overflow-hidden rounded-lg border border-border bg-black">
+        {/* The response-systems rows are buttons, so the data already has a
+            keyboard path. This gives the cortex itself one: the picture is the
+            control, so it has to be reachable and announce what it selected. */}
+        <div
+          role="group"
+          tabIndex={0}
+          aria-label="Cortical surface. Arrow keys move between response systems."
+          onKeyDown={onCortexKey}
+          className="focus-ring relative h-[520px] overflow-hidden rounded-lg border border-border bg-black"
+        >
           <BrainCanvas
             parcelLevels={parcelLevels}
             colors={colors}
@@ -191,6 +220,10 @@ export default function BrainView({ run }: { run: Run }) {
             selected={family}
             onSelect={setFamily}
           />
+
+          <p aria-live="polite" className="sr-only">
+            {detail ? `${detail.name} selected` : 'No response system selected'}
+          </p>
 
           <div className="pointer-events-none absolute left-5 top-5 flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-[0.16em] text-white/40">
