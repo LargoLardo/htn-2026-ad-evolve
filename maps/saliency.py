@@ -8,6 +8,7 @@ Output is a heatmap PNG plus an NxN grid of mean density per cell. The grid
 geometry must match lib/grid.mjs exactly or the two maps cannot be subtracted.
 """
 import argparse
+import contextlib
 import json
 import sys
 
@@ -58,7 +59,11 @@ def load_image(path):
 
 def saliency(image, device):
     """Return a normalised 0-1 density the same size as the input image."""
-    model = DeepGazeIIE(pretrained=True).to(device).eval()
+    # EfficientNet prints "Loaded pretrained weights..." straight to stdout, which
+    # corrupts the JSON this script exists to emit. Everything the model says goes
+    # to stderr; stdout carries the result and nothing else.
+    with contextlib.redirect_stdout(sys.stderr):
+        model = DeepGazeIIE(pretrained=True).to(device).eval()
     tensor = torch.tensor(image.transpose(2, 0, 1)[np.newaxis], dtype=torch.float32, device=device)
 
     # Uniform centerbias, deliberately.
