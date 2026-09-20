@@ -32,7 +32,9 @@ const normalize = (values: number[]) => {
   return max - min < 1e-12 ? values.map(() => 0) : values.map(v => (v - min) / (max - min));
 };
 
-export default function MapsView({ run }: { run: Run }) {
+export interface MappableImage { hash: string; url: string; label: string }
+
+export default function MapsView({ run, images }: { run?: Run; images?: MappableImage[] }) {
   const [available, setAvailable] = useState<string[] | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
   const [data, setData] = useState<MapsArtifact | null>(null);
@@ -43,8 +45,12 @@ export default function MapsView({ run }: { run: Run }) {
   /** Every still in the run that could have maps: the uploaded original first,
    *  then finalists, then everything else. Most runs have no uploaded original,
    *  so restricting this to brief.originalAsset would show an empty tab. */
-  const mappable = useMemo(() => {
-    const seen = new Map<string, { hash: string; url: string; label: string }>();
+  const mappable = useMemo<MappableImage[]>(() => {
+    // An explicit list wins: the standalone maps page maps files that were never
+    // part of a run, and those have no run to derive candidates from.
+    if (images) return images;
+    if (!run) return [];
+    const seen = new Map<string, MappableImage>();
     const add = (asset: { url?: string; mediaHash?: string; mediaType?: string } | null | undefined, label: string) => {
       if (!asset?.mediaHash || !asset.url || asset.mediaType === 'video') return;
       if (!seen.has(asset.mediaHash)) seen.set(asset.mediaHash, { hash: asset.mediaHash, url: asset.url, label });
@@ -53,7 +59,7 @@ export default function MapsView({ run }: { run: Run }) {
     run.finalists.forEach((c, i) => add(c.asset, `Finalist ${i + 1}`));
     run.rounds.forEach(r => r.candidates.forEach(c => add(c.asset, `Gen ${r.number} · ${c.id.slice(-4)}`)));
     return [...seen.values()];
-  }, [run]);
+  }, [run, images]);
 
   useEffect(() => {
     let live = true;
