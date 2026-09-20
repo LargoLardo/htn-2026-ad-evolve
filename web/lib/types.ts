@@ -30,7 +30,8 @@ export interface Brief {
   description: string;
   audience: string;
   goal: string;
-  weights: Record<Emotion, number>;
+  tone: string;
+  weights?: Record<Emotion, number>;
   rounds: number;
   population: number;
   shortlist: number;

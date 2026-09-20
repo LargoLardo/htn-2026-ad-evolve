@@ -9,7 +9,7 @@ import BriefForm from './BriefForm';
 import RunWorkspace from './RunWorkspace';
 import { getConfig } from '@/lib/api';
 import { useRun } from '@/lib/useRun';
-import { EMOTIONS, type Config } from '@/lib/types';
+import { type Config } from '@/lib/types';
 
 export default function RunView({ runId }: { runId: string }) {
   const router = useRouter();
@@ -83,8 +83,8 @@ export default function RunView({ runId }: { runId: string }) {
             <Field label="Audience" value={brief.audience} />
             <Field label="Goal" value={brief.goal} />
             <Field
-              label="Emotional priorities"
-              value={EMOTIONS.map((e) => `${e} ${brief.weights[e]}`).join(', ')}
+              label="Tone"
+              value={brief.tone ?? ''}
             />
             <Field
               label="Budget"
