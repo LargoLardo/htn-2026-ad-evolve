@@ -99,7 +99,7 @@ export default function Sidebar() {
             <li><strong className="font-normal text-foreground">Research once.</strong> Turn the product, audience and goal into evidence-linked creative hypotheses.</li>
             <li><strong className="font-normal text-foreground">Generate genomes.</strong> Give every concept a hook, visual approach, emotional angle, proof point, call to action, palette, motion and audio.</li>
             <li><strong className="font-normal text-foreground">Generate and review media.</strong> Create images or Seedance video takes. Review actual pixels, copy and claims; video review samples six frames and transcribes audio. Shortlist reviewed takes and retain provisional drafts if all fail.</li>
-            <li><strong className="font-normal text-foreground">Evaluate and select.</strong> Score shortlisted takes with Percept’s four Glasser families against a fixed original baseline. Images become 10-second videos. The highest neural score wins; emotion priorities guide concepts only.</li>
+            <li><strong className="font-normal text-foreground">Evaluate and select.</strong> Score shortlisted takes with Percept’s four Glasser families against a fixed original baseline. Images become 10-second videos. Selection takes the largest predicted response; emotion priorities guide concepts only. Read that number as response magnitude, not quality.</li>
             <li><strong className="font-normal text-foreground">Recombine and mutate.</strong> Preserve the best candidate, mix parent genes and change exactly one gene per child.</li>
             <li><strong className="font-normal text-foreground">Review the finalists.</strong> Inspect genomes, compare generations and download the drafts.</li>
           </ol>
@@ -108,6 +108,13 @@ export default function Sidebar() {
             Percept scoring summarizes predicted cortical activity. It needs no fitted decoder,
             but is not a validated emotion or conversion score. An uploaded original is the fixed
             baseline; otherwise the first shortlisted take establishes it.
+          </p>
+          <p>
+            Treat the number as the size of a predicted response, not a grade. Published work
+            testing TRIBE against real viewer engagement on YouTube found a correlation
+            indistinguishable from zero, no better than loudness. The maps are the useful
+            output: they say which region of an ad carries the response, which holds whether
+            or not the overall magnitude predicts anything.
           </p>
         </div>
       </Dialog>

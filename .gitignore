@@ -10,3 +10,4 @@ __pycache__/
 artifacts/
 shared-conversation*
 /deploy/baseten/data/
+.venv-maps/

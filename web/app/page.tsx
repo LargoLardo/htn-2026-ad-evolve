@@ -37,40 +37,39 @@ export default function Home() {
     <>
       <Nav />
       <main id="main" className="relative min-h-screen">
-        {/* Supabase's hero is asymmetric rather than centred: headline in column
-            one, subcopy bottom-aligned against it in column two. The flickering
-            grid sits behind it, masked so it fades out before it reaches the
-            text and never competes with the headline for attention. */}
-        <div className="relative isolate overflow-hidden">
+        {/* One centred column holding the whole viewport, less the 64px sticky
+            nav above it. svh rather than vh so mobile browser chrome retracting
+            does not make the section taller than the screen it is measured
+            against. The flickering grid is masked to a centred ellipse so it
+            fades out before it reaches the text. */}
+        <div className="relative isolate flex min-h-[calc(100svh-4rem)] items-center overflow-hidden">
           <FlickeringGrid
-            className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_70%_60%_at_30%_40%,black_10%,transparent_70%)]"
+            className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,black_10%,transparent_75%)]"
             squareSize={4}
             gridGap={6}
             flickerChance={0.25}
             maxOpacity={0.22}
           />
-          <SectionContainer className="pt-12 pb-8 md:pt-32 md:pb-16">
-          <div className="flex flex-col gap-6 lg:gap-8">
-            <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-2">
-              <h1 className="text-4xl text-foreground sm:text-5xl sm:leading-none">
+          <SectionContainer className="py-16">
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center lg:gap-8">
+              <h1 className="text-4xl text-foreground sm:text-5xl sm:leading-none md:text-6xl">
                 <span className="block">Evolve the ad,</span>
                 <span className="block text-brand">not just the copy.</span>
               </h1>
-              <p className="text-balance text-foreground-lighter">
+              <p className="max-w-[60ch] text-balance text-lg text-foreground-lighter">
                 A population of creative concepts, each with an inspectable genome.
                 Generate and review image or video takes, score the shortlist, then recombine and
                 mutate across generations, with the full lineage visible the whole way.
               </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <ButtonLink href="/dashboard" variant="primary" size="large">
+                  Start an experiment
+                </ButtonLink>
+                <ButtonLink href="#loop" variant="default" size="large">
+                  How it works
+                </ButtonLink>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ButtonLink href="/dashboard" variant="primary" size="large">
-                Start an experiment
-              </ButtonLink>
-              <ButtonLink href="#loop" variant="default" size="large">
-                How it works
-              </ButtonLink>
-            </div>
-          </div>
           </SectionContainer>
         </div>
 

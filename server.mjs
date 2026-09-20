@@ -6,9 +6,13 @@ import { fileURLToPath } from 'node:url';
 import { createRun, evolveRun, LIMITS, validateBrief } from './lib/evolution.mjs';
 import * as defaultProviders from './lib/providers.mjs';
 import { ingestMedia, getUploadedAsset, assetsDir, MAX_MEDIA_BYTES } from './lib/media.mjs';
+import { getRunMaps, startRunMaps, watchRunMaps } from './lib/run-maps.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, 'data', 'runs');
+// Where scripts/build-demo-maps.mjs writes its artifacts.
+const mapsPath = hash => path.join(process.env.EVOLVE_MAPS_DIR || 'data/maps', `${hash}-maps.json`);
+
 const MIME = { '.mp4': 'video/mp4', '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.ttf': 'font/ttf' };
 
 async function save(run, directory = DATA) {
@@ -70,6 +74,32 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
       const pathname = decodeURIComponent(url.pathname);
       if (request.method === 'GET' && pathname === '/api/config') return json(response, 200, { ...providers.capabilities(), limits: LIMITS });
       if (request.method === 'GET' && pathname === '/api/runs') return json(response, 200, [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(run => ({ id: run.id, status: run.status, stage: run.stage, product: run.brief.product, createdAt: run.createdAt, metrics: run.metrics })));
+      // Precomputed attention/impact maps for one uploaded image, keyed by its
+      // media hash. Built offline by scripts/build-demo-maps.mjs because a 3x3
+      // impact map is ten GPU passes and must not be paid for during a demo.
+      // Which media already has precomputed maps. The UI needs this to offer a
+      // picker; probing every candidate image with a 404 would be worse.
+      if (request.method === 'GET' && pathname === '/api/maps') {
+        try {
+          const names = await readdir(process.env.EVOLVE_MAPS_DIR || 'data/maps');
+          return json(response, 200, names.flatMap(name => name.match(/^([a-f0-9]{64})-maps\.json$/)?.[1] ?? []));
+        } catch { return json(response, 200, []); }
+      }
+      // The full-resolution attention heatmap. DeepGaze produces a continuous
+      // 1024px density; reducing it to grid cells for display throws that away,
+      // so the UI overlays this greyscale PNG directly.
+      if (request.method === 'GET' && /^\/api\/maps\/[a-f0-9]{64}\/attention\.png$/.test(pathname)) {
+        const file = mapsPath(pathname.split('/').at(-2)).replace(/-maps\.json$/, '-attention.png');
+        try {
+          const bytes = await readFile(file);
+          response.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'Content-Length': bytes.length });
+          return response.end(request.method === 'HEAD' ? undefined : bytes);
+        } catch { return json(response, 404, { error: 'No attention heatmap for this media.' }); }
+      }
+      if (request.method === 'GET' && /^\/api\/maps\/[a-f0-9]{64}$/.test(pathname)) {
+        try { return json(response, 200, JSON.parse(await readFile(mapsPath(pathname.split('/').at(-1)), 'utf8'))); }
+        catch { return json(response, 404, { error: 'No precomputed maps for this media.' }); }
+      }
       if (request.method === 'POST' && pathname === '/api/media') {
         const type = request.headers['content-type']?.split(';')[0];
         if (!['image/png', 'image/jpeg', 'image/webp', 'video/mp4'].includes(type)) return json(response, 415, { error: 'Upload PNG, JPEG, WebP or MP4 media.' });
@@ -93,6 +123,11 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
         if (!capabilities.liveResearch || !(brief.mediaType === 'video' ? capabilities.liveVideos : capabilities.liveImages)) return json(response, 400, { error: 'Configure OpenAI for research/review and the selected image or Seedance video provider.' });
         if (brief.scorer === 'tribe' && !capabilities.tribe) return json(response, 400, { error: 'Percept scoring requires the updated TRIBE scoring endpoint. Decoder training is paused.' });
         if (active.size >= LIMITS.activeRuns) return json(response, 429, { error: 'Two runs are already active. Wait for one to finish or cancel it.' });
+        if (brief.referenceMediaIds?.length) {
+          try { brief.referenceAssets = await Promise.all(brief.referenceMediaIds.map(getUploadedAsset)); }
+          catch { return json(response, 400, { error: 'A reference image is missing or invalid. Upload it again.' }); }
+          if (brief.referenceAssets.some(asset => asset.mediaType !== 'image')) return json(response, 400, { error: 'Reference media must be still images.' });
+        }
         if (brief.originalMediaId) {
           try { brief.originalAsset = await getUploadedAsset(brief.originalMediaId); }
           catch { return json(response, 400, { error: 'Original media is missing or invalid. Upload it again.' }); }
@@ -112,12 +147,38 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
         }).finally(() => active.delete(run.id));
         return;
       }
-      const route = pathname.match(/^\/api\/runs\/([a-f\d-]{36})(?:\/(cancel|export))?$/i);
+      const route = pathname.match(/^\/api\/runs\/([a-f\d-]{36})(?:\/(cancel|export|maps|maps\/stream))?$/i);
       if (route) {
         const run = runs.get(route[1]);
         if (!run) return json(response, 404, { error: 'Run not found.' });
         if (request.method === 'GET' && !route[2]) return json(response, 200, run);
         if (request.method === 'GET' && route[2] === 'export') return json(response, 200, run, { 'Content-Disposition': `attachment; filename="evolve-${run.id}.json"` });
+        // Maps belong to the run that produced the images. Building is long, so
+        // this starts a detached job and answers immediately; progress is read
+        // back from the stream below.
+        if (request.method === 'POST' && route[2] === 'maps') {
+          if (run.status === 'running') return json(response, 409, { error: 'Wait for the run to finish before building its maps.' });
+          return json(response, 202, startRunMaps(run));
+        }
+        if (request.method === 'GET' && route[2] === 'maps') return json(response, 200, getRunMaps(run.id) ?? { runId: run.id, status: 'idle', targets: [] });
+        // Server-sent events rather than polling: the interesting thing is the
+        // map filling in pass by pass, and a poll interval either misses passes
+        // or hammers the server between them.
+        if (request.method === 'GET' && route[2] === 'maps/stream') {
+          response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+          const send = job => response.write(`data: ${JSON.stringify(job)}\n\n`);
+          const current = getRunMaps(run.id);
+          if (current) send(current);
+          const stop = watchRunMaps(run.id, job => {
+            send(job);
+            if (job.status === 'complete' || job.status === 'failed') { stop(); response.end(); }
+          });
+          // Proxies drop a silent stream, and this one is silent for a whole
+          // GPU pass at a time.
+          const beat = setInterval(() => response.write(': keep-alive\n\n'), 15_000);
+          request.on('close', () => { clearInterval(beat); stop(); });
+          return;
+        }
         if (request.method === 'POST' && route[2] === 'cancel') {
           active.get(run.id)?.abort(new DOMException('User cancelled the run.', 'AbortError'));
           return json(response, 200, { id: run.id, status: active.has(run.id) ? 'cancelling' : run.status });

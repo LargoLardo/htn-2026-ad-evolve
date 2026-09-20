@@ -285,7 +285,7 @@ export default function BriefForm({
           <p className="text-xs text-foreground-lighter">Original uploaded and saved.</p>
           <Button type="button" disabled={locked} onClick={() => setOriginal(null)}>Remove original</Button>
         </div>}
-        <p className="text-xs text-foreground-lighter">Percept overall score: four equally weighted Glasser families. Highest neural score wins among reviewed takes; if all fail, provisional drafts remain visible.</p>
+        <p className="text-xs text-foreground-lighter">Percept overall score: four equally weighted Glasser families, measuring the magnitude of the predicted cortical response against the original. Selection takes the largest among reviewed takes; if all fail, provisional drafts remain visible. A larger predicted response is not by itself evidence of a better ad.</p>
       </div>
 
       <details className="group border-t border-border pt-4">

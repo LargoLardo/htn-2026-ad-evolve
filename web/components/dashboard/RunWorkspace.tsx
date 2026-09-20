@@ -1,15 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Download } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import CreativeInspector from './CreativeInspector';
+import LineageTree from './LineageTree';
 import { assetLink, exportHref, safeLink } from '@/lib/api';
 import { type Candidate, type Run, type RunStage } from '@/lib/types';
 import MediaPreview from './MediaPreview';
-import { compareCandidates, isPercept, scoreLabel, selectionScore } from '@/lib/scores';
+import { compareCandidates, isPercept, scoreDisplay, selectionScore } from '@/lib/scores';
 import { cn } from '@/lib/utils';
 
 const STAGE_TEXT: Record<RunStage, string> = {
@@ -26,8 +27,19 @@ const STAGE_TEXT: Record<RunStage, string> = {
   failed: 'Run failed.',
 };
 
-const TABS = ['candidates', 'lineage', 'brain', 'research', 'log'] as const;
+const TABS = ['lineage', 'brain', 'maps', 'research', 'log'] as const;
 type Tab = (typeof TABS)[number];
+
+// The maps tab fetches a precomputed artifact, so it is not worth loading until
+// someone opens it.
+const MapsView = dynamic(() => import('@/components/maps/MapsView'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-lg border border-dashed border-border px-5 py-10 text-center text-sm text-foreground-lighter">
+      Loading the maps…
+    </div>
+  ),
+});
 
 // WebGL and the mesh binaries are only worth loading if this tab is opened, and
 // the canvas cannot be server-rendered.
@@ -47,7 +59,17 @@ const clamp = (value?: number | null) =>
   Math.min(100, Math.max(0, typeof value === 'number' && Number.isFinite(value) ? value : 0));
 
 // Keep short cached runs readable without rounding away their duration.
-const elapsed = (ms: number) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`);
+// Runs are minutes long, not seconds: a single Percept pass alone is about two
+// minutes. Reporting 1520.5s for a 25 minute run is accurate and unreadable,
+// so past a minute this switches to minutes and past an hour to hours.
+const elapsed = (ms: number) => {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const seconds = ms / 1000;
+  if (seconds < 90) return `${seconds.toFixed(1)}s`;
+  const minutes = seconds / 60;
+  if (minutes < 90) return `${minutes.toFixed(1)} min`;
+  return `${Math.floor(minutes / 60)}h ${Math.round(minutes % 60)}m`;
+};
 
 export default function RunWorkspace({
   run,
@@ -58,22 +80,38 @@ export default function RunWorkspace({
   running: boolean;
   onCancel: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>('candidates');
-  const [selectedRound, setSelectedRound] = useState<string>('latest');
+  const [tab, setTab] = useState<Tab>('lineage');
   const [inspecting, setInspecting] = useState<Candidate | null>(null);
+
+  // The server writes metrics at stage boundaries, so elapsedMs sits still for
+  // the whole of a Percept call, which is about two minutes. A timer that
+  // freezes for two minutes reads as a hung run, so while a run is live this
+  // counts from its start time instead and only defers to the recorded figure
+  // once the run is over and that figure is final.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+  // metrics.elapsedMs is only written when a stage changes, so on a finished
+  // run it stops at the last stage boundary rather than at the end, and while
+  // one is live it sits still for the two minutes a Percept pass takes. Both
+  // under-report. The event log has real timestamps, so measure the span that
+  // actually happened and fall back to the recorded figure only when there is
+  // nothing to measure.
+  const elapsedMs = useMemo(() => {
+    const started = new Date(run.createdAt).getTime();
+    if (running) return Math.max(run.metrics.elapsedMs, now - started);
+    const last = run.events?.at(-1)?.time;
+    const measured = last ? new Date(last).getTime() - started : 0;
+    return Number.isFinite(measured) && measured > 0 ? measured : run.metrics.elapsedMs;
+  }, [running, now, run.createdAt, run.events, run.metrics.elapsedMs]);
 
   const allCandidates = useMemo(
     () => run.rounds.flatMap((round) => round.candidates),
     [run.rounds]
   );
-
-  const shown = useMemo(() => {
-    if (selectedRound === 'final' && run.finalists.length) return run.finalists;
-    if (selectedRound === 'latest' || selectedRound === 'final') {
-      return run.finalists.length ? run.finalists : (run.rounds.at(-1)?.candidates ?? []);
-    }
-    return run.rounds.find((r) => String(r.number) === selectedRound)?.candidates ?? [];
-  }, [run, selectedRound]);
 
   const progress = Math.min(96, 5 + (run.rounds.length / Math.max(1, run.brief.rounds)) * 85);
 
@@ -121,7 +159,7 @@ export default function RunWorkspace({
             ...(run.metrics.reviewed > 0
               ? ([['Reviewed', `${run.metrics.reviewed - run.metrics.rejected}/${run.metrics.reviewed}`]] as [string, string][])
               : ([['Cache hits', run.metrics.cacheHits]] as [string, number][])),
-            ['Elapsed', elapsed(run.metrics.elapsedMs)],
+            ['Elapsed', elapsed(elapsedMs)],
           ].map(([label, value]) => (
             <div key={label as string} className="flex flex-col gap-0.5 p-4">
               <dt className="label">{label as string}</dt>
@@ -132,7 +170,7 @@ export default function RunWorkspace({
       </div>
 
       <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
-        {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative. Highest neural score wins among reviewed takes. Predicted cortical response, not validated emotion or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}
+        {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative, where 50 is parity with it. This is the magnitude of the predicted cortical response, and selection currently takes the largest. A larger response is not evidence of a better ad: a cluttered original with a wall of body text scores highly because it is taxing to read. Predicted response only, not measured emotion, engagement or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}
         {run.requiresReview && ' No drafts passed review. The retained provisional drafts need review and revision.'}
       </p>
 
@@ -158,77 +196,25 @@ export default function RunWorkspace({
         </span>
       </div>
 
-      {tab === 'candidates' && (
+      {/* One tab, not two. The tree already shows every candidate with its
+          score and opens the same inspector on click, so a parallel grid of the
+          same creatives filtered by generation was a second answer to a
+          question the tree answers better: it shows WHICH parent each one came
+          from, which the grid could never say. */}
+      {tab === 'lineage' && (
         <>
-          <div className="flex flex-wrap gap-1.5">
-            {run.finalists.length > 0 && (
-              <RoundChip active={selectedRound === 'final'} onClick={() => setSelectedRound('final')}>
-                {run.requiresReview ? 'Provisional drafts' : 'Finalists'}
-              </RoundChip>
-            )}
-            {run.rounds.map((round) => (
-              <RoundChip
-                key={round.number}
-                active={selectedRound === String(round.number)}
-                onClick={() => setSelectedRound(String(round.number))}
-              >
-                Gen {round.number}
-              </RoundChip>
-            ))}
-          </div>
-
-          {shown.length === 0 ? (
-            <Waiting running={running} text="No candidates in this generation yet." />
+          {allCandidates.length === 0 ? (
+            <Waiting running={running} text="No candidates yet." />
           ) : (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {[...shown].sort(compareCandidates).map((candidate, index) => (
-                <CreativeCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  rank={index + 1}
-                  onClick={() => setInspecting(candidate)}
-                />
-              ))}
-            </div>
+            <LineageTree run={run} onInspect={setInspecting} />
           )}
-
           <FitnessChart run={run} />
         </>
       )}
 
-      {tab === 'lineage' && (
-        <div className="flex flex-col gap-5">
-          {run.rounds.map((round) => (
-            <section key={round.number} className="flex flex-col gap-2">
-              <h3 className="label">Generation {round.number}</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {round.candidates.map((candidate) => (
-                  <button
-                    key={candidate.id}
-                    onClick={() => setInspecting(candidate)}
-                    className={cn(
-                      'focus-ring rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors',
-                      candidate.selected
-                        ? 'border-brand-400 bg-brand-200 text-foreground'
-                        : 'border-border bg-surface-100 text-foreground-lighter hover:text-foreground'
-                    )}
-                  >
-                    <span className="tabular-nums">{candidate.id}</span>
-                    <span className="ml-2 tabular-nums">{score(selectionScore(candidate))}</span>
-                    {candidate.parents.length > 0 && (
-                      <span className="ml-2 text-foreground-muted">
-                        ← {candidate.parents.join(', ')}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
-
       {tab === 'brain' && <BrainView run={run} />}
+
+      {tab === 'maps' && <MapsView run={run} />}
 
       {tab === 'research' && (
         <div className="flex flex-col gap-4">
@@ -296,66 +282,11 @@ export default function RunWorkspace({
   );
 }
 
-function RoundChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'focus-ring rounded-md border px-2.5 py-1 text-xs transition-colors',
-        active
-          ? 'border-brand-400 bg-brand-200 text-foreground'
-          : 'border-border bg-surface-100 text-foreground-lighter hover:text-foreground'
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Waiting({ running, text }: { running: boolean; text: string }) {
   return (
     <div className="rounded-lg border border-dashed border-border px-5 py-10 text-center text-sm text-foreground-lighter">
       {running ? 'Working…' : text}
     </div>
-  );
-}
-
-function CreativeCard({
-  candidate,
-  rank,
-  onClick,
-}: {
-  candidate: Candidate;
-  rank: number;
-  onClick: () => void;
-}) {
-  const src = assetLink(candidate.asset?.url);
-  return (
-    <Panel className="h-full">
-      <div className="flex h-full w-full flex-col text-left" data-candidate-id={candidate.id}>
-        <div className="relative aspect-square w-full overflow-hidden bg-surface-200">
-          {src ? <MediaPreview asset={candidate.asset} title={candidate.headline} className="size-full object-contain" /> : <span className="absolute inset-0 grid place-items-center px-3 text-center text-xs text-foreground-muted">Awaiting media</span>}
-          <span className="pointer-events-none absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white">
-            {candidate.provisional ? 'PROVISIONAL · NEEDS REVIEW' : candidate.original ? 'ORIGINAL' : rank}
-          </span>
-        </div>
-        <button onClick={onClick} className="focus-ring flex flex-1 flex-col gap-1 p-3 text-left" aria-label={`Inspect ${candidate.headline}`}>
-          <p className="line-clamp-2 text-sm text-foreground">{candidate.headline}</p>
-          <div className="mt-auto flex w-full items-center justify-between gap-2 pt-1">
-            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">{scoreLabel(candidate)}</span>
-            <span className="text-sm tabular-nums text-foreground">{score(selectionScore(candidate))}</span>
-          </div>
-        </button>
-      </div>
-    </Panel>
   );
 }
 
