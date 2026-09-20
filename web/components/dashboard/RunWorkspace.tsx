@@ -10,7 +10,7 @@ import LineageTree from './LineageTree';
 import { assetLink, exportHref, safeLink } from '@/lib/api';
 import { type Candidate, type Run, type RunStage } from '@/lib/types';
 import MediaPreview from './MediaPreview';
-import { compareCandidates, isPercept, scoreLabel, selectionScore } from '@/lib/scores';
+import { compareCandidates, isPercept, scoreDisplay, selectionScore } from '@/lib/scores';
 import { cn } from '@/lib/utils';
 
 const STAGE_TEXT: Record<RunStage, string> = {
@@ -334,8 +334,8 @@ function CreativeCard({
         <button onClick={onClick} className="focus-ring flex flex-1 flex-col gap-1 p-3 text-left" aria-label={`Inspect ${candidate.headline}`}>
           <p className="line-clamp-2 text-sm text-foreground">{candidate.headline}</p>
           <div className="mt-auto flex w-full items-center justify-between gap-2 pt-1">
-            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">{scoreLabel(candidate)}</span>
-            <span className="text-sm tabular-nums text-foreground">{score(selectionScore(candidate))}</span>
+            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">{scoreDisplay(candidate).unit}</span>
+            <span className="text-sm tabular-nums text-foreground" title={scoreDisplay(candidate).title}>{scoreDisplay(candidate).value}</span>
           </div>
         </button>
       </div>

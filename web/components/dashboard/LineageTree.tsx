@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { assetLink } from '@/lib/api';
-import { scoreLabel, selectionScore } from '@/lib/scores';
+import { scoreDisplay, scoreLabel } from '@/lib/scores';
 import type { Candidate, Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -118,7 +118,7 @@ export default function LineageTree({
 
           {layout.nodes.map(({ candidate, x, y, gen }) => {
             const src = assetLink(candidate.asset?.url);
-            const value = selectionScore(candidate);
+            const shown = scoreDisplay(candidate);
             return (
               <button
                 key={candidate.id}
@@ -148,9 +148,7 @@ export default function LineageTree({
                   <span className="truncate text-[10px] text-foreground-lighter">
                     {isCarriedOver(candidate) ? 'copy' : candidate.id.slice(-4)}
                   </span>
-                  <span className="text-[11px] tabular-nums text-foreground">
-                    {typeof value === 'number' && Number.isFinite(value) ? value.toFixed(1) : '-'}
-                  </span>
+                  <span className="text-[11px] tabular-nums text-foreground">{shown.value}</span>
                 </span>
               </button>
             );
