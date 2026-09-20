@@ -122,6 +122,11 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
         if (!capabilities.liveResearch || !(brief.mediaType === 'video' ? capabilities.liveVideos : capabilities.liveImages)) return json(response, 400, { error: 'Configure OpenAI for research/review and the selected image or Seedance video provider.' });
         if (brief.scorer === 'tribe' && !capabilities.tribe) return json(response, 400, { error: 'Percept scoring requires the updated TRIBE scoring endpoint. Decoder training is paused.' });
         if (active.size >= LIMITS.activeRuns) return json(response, 429, { error: 'Two runs are already active. Wait for one to finish or cancel it.' });
+        if (brief.referenceMediaIds?.length) {
+          try { brief.referenceAssets = await Promise.all(brief.referenceMediaIds.map(getUploadedAsset)); }
+          catch { return json(response, 400, { error: 'A reference image is missing or invalid. Upload it again.' }); }
+          if (brief.referenceAssets.some(asset => asset.mediaType !== 'image')) return json(response, 400, { error: 'Reference media must be still images.' });
+        }
         if (brief.originalMediaId) {
           try { brief.originalAsset = await getUploadedAsset(brief.originalMediaId); }
           catch { return json(response, 400, { error: 'Original media is missing or invalid. Upload it again.' }); }
