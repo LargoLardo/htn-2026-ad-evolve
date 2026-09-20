@@ -9,7 +9,7 @@ const STAGES = [
   { n: '01', title: 'Research once', body: 'Turn the product, audience and goal into evidence-linked creative hypotheses.' },
   { n: '02', title: 'Generate genomes', body: 'Every concept gets a hook, visual approach, emotional angle, proof point, CTA, palette, motion and audio.' },
   { n: '03', title: 'Generate and review media', body: 'Generate image or video takes, review the media, and shortlist candidates for neural evaluation.' },
-  { n: ‘04’, title: ‘Evaluate and select’, body: ‘Rank reviewed candidates by neural score against one fixed original baseline.’ },
+  { n: '04', title: 'Evaluate and select', body: 'Rank reviewed candidates by neural score against one fixed original baseline.' },
   { n: '05', title: 'Recombine and mutate', body: 'Preserve the best, mix parent genes, change one gene per child, repeat.' },
   { n: '06', title: 'Review finalists', body: 'Inspect genomes, compare generations, download the drafts and the full run.' },
 ];

@@ -33,7 +33,7 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           <MediaPreview asset={candidate.asset} title={candidate.headline} className="w-full rounded-lg border border-border" />
           <a href={src} download={`${slug}-${candidate.id}.${src.split('.').at(-1)}`} className="focus-ring inline-flex items-center justify-center gap-2 rounded-md border border-border-button bg-surface-100 px-4 py-2 text-sm text-foreground transition-colors hover:bg-surface-200"><Download size={14} /> Download draft</a>
         </> : <p className="text-sm text-foreground-lighter">No media is available yet.</p>}
-        <p className="text-xs text-foreground-lighter">{neural?.source === ‘tribe-neural’ ? ‘TRIBE evaluated this media using neural scoring.’ : review ? ‘Automated media review is available below.’ : ‘No neural evaluation has been recorded.’}</p>
+        <p className="text-xs text-foreground-lighter">{neural?.source === 'tribe-neural' ? 'TRIBE evaluated this media using neural scoring.' : review ? 'Automated media review is available below.' : 'No neural evaluation has been recorded.'}</p>
       </div>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
