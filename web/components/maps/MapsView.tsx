@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePanZoom } from '@/lib/usePanZoom';
 import { assetLink } from '@/lib/api';
 import type { Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -68,15 +69,16 @@ export default function MapsView({ run }: { run: Run }) {
   // image, so reading one at container width means squinting at it. Everything
   // here is one transform on a wrapper, so the overlays stay registered with
   // the ad without any of them knowing about the zoom.
-  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
-  const dragging = useRef<{ x: number; y: number } | null>(null);
-  const reset = () => setZoom({ scale: 1, x: 0, y: 0 });
-  const step = (factor: number) => setZoom(current => {
-    const scale = Math.min(6, Math.max(1, current.scale * factor));
-    // Snapping back to the origin at 1x stops a zoomed-out image drifting off
-    // centre with no way to tell it is offset rather than cropped.
-    return scale === 1 ? { scale, x: 0, y: 0 } : { ...current, scale };
-  });
+  // Snapping back to the origin at 1x stops a zoomed-out image drifting off
+  // centre with no way to tell it is offset rather than cropped, and a bare
+  // wheel over an ad is the page scrolling until the map is actually zoomed.
+  const {
+    viewportRef,
+    view: zoom,
+    onPointerDown: onZoomPointerDown,
+    zoomAtCentre: step,
+    reset,
+  } = usePanZoom<HTMLDivElement>({ min: 1, max: 6, snapToOriginAtMin: true, requireModifierAtMin: true });
   const [job, setJob] = useState<MapsJob | null>(null);
   const [building, setBuilding] = useState(false);
 
@@ -287,21 +289,9 @@ export default function MapsView({ run }: { run: Run }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div
+          ref={viewportRef}
           className="relative overflow-hidden rounded-lg border border-border"
-          onWheelCapture={event => {
-            if (!event.ctrlKey && !event.metaKey && zoom.scale === 1) return;
-            step(event.deltaY < 0 ? 1.15 : 1 / 1.15);
-          }}
-          onPointerDown={event => {
-            if (zoom.scale === 1) return;
-            dragging.current = { x: event.clientX - zoom.x, y: event.clientY - zoom.y };
-          }}
-          onPointerMove={event => {
-            if (!dragging.current) return;
-            setZoom(current => ({ ...current, x: event.clientX - dragging.current!.x, y: event.clientY - dragging.current!.y }));
-          }}
-          onPointerUp={() => { dragging.current = null; }}
-          onPointerLeave={() => { dragging.current = null; }}
+          onPointerDown={event => { if (zoom.scale > 1) onZoomPointerDown(event); }}
         >
           <div className="absolute right-2 top-2 z-10 flex gap-1">
             <MapButton label="Zoom out" onClick={() => step(1 / 1.4)}>-</MapButton>
