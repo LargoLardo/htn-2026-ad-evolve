@@ -2,7 +2,7 @@
 
 <img src="advolve.png" width="240" height="240">
 
-Evolve your ads.
+Evolve your ads, use the brain, change the game.
 
 [![GitHub stars](https://img.shields.io/github/stars/LargoLardo/htn-2026-ad-evolve?style=social)](https://github.com/LargoLardo/htn-2026-ad-evolve)
 [![GitHub forks](https://img.shields.io/github/forks/LargoLardo/htn-2026-ad-evolve?style=social)](https://github.com/LargoLardo/htn-2026-ad-evolve/network/members)
