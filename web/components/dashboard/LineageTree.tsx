@@ -26,6 +26,10 @@ const GAP_Y = 88;
  *  stem reads as belonging to the child, long enough to be visible as a stem. */
 const JUNCTION_RISE = 26;
 
+/** Control point offset on a parent link. Small, so links read as straight
+ *  lines that ease into vertical at each end rather than as deep curves. */
+const EASE = 18;
+
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 2.5;
 /** Pointer travel, in pixels, past which a gesture was a pan and the click it
@@ -359,11 +363,26 @@ export default function LineageTree({
                     // secondary, thin and dashed, so the hovered contribution
                     // is obvious without erasing the other.
                     const coParent = Boolean(hovered) && joined && link.childId !== hovered && parent.id !== hovered;
-                    const bend = Math.max(16, (endY - parent.y) / 2);
+                    // Nearly straight, with just enough easing at each end to
+                    // leave the parent and enter the junction vertically.
+                    //
+                    // A control offset of half the vertical gap made every link
+                    // a long S, and eight of those crossing read as contour
+                    // lines rather than descent. A short fixed offset keeps the
+                    // middle of the run straight, so a link is a direction
+                    // rather than a shape.
+                    //
+                    // Orthogonal elbows would be straighter still and are wrong
+                    // here: every link in a generation shares the same vertical
+                    // gap, so their horizontal runs would all land on one line
+                    // and the dashed co-parent strokes would disappear beneath
+                    // the solid ones. Curves only coincide at their endpoints.
+                    const bend = Math.min(EASE, (endY - parent.y) / 2);
+                    const d = `M ${parent.x} ${parent.y} C ${parent.x} ${parent.y + bend}, ${endX} ${endY - bend}, ${endX} ${endY}`;
                     return (
                       <path
                         key={i}
-                        d={`M ${parent.x} ${parent.y} C ${parent.x} ${parent.y + bend}, ${endX} ${endY - bend}, ${endX} ${endY}`}
+                        d={d}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={coParent ? 1 : stroke}

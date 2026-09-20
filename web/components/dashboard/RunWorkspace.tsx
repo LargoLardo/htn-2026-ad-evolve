@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Download } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/ui/button';
@@ -83,6 +83,21 @@ export default function RunWorkspace({
   const [tab, setTab] = useState<Tab>('lineage');
   const [inspecting, setInspecting] = useState<Candidate | null>(null);
 
+  // The server writes metrics at stage boundaries, so elapsedMs sits still for
+  // the whole of a Percept call, which is about two minutes. A timer that
+  // freezes for two minutes reads as a hung run, so while a run is live this
+  // counts from its start time instead and only defers to the recorded figure
+  // once the run is over and that figure is final.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+  const elapsedMs = running
+    ? Math.max(run.metrics.elapsedMs, now - new Date(run.createdAt).getTime())
+    : run.metrics.elapsedMs;
+
   const allCandidates = useMemo(
     () => run.rounds.flatMap((round) => round.candidates),
     [run.rounds]
@@ -134,7 +149,7 @@ export default function RunWorkspace({
             ...(run.metrics.reviewed > 0
               ? ([['Reviewed', `${run.metrics.reviewed - run.metrics.rejected}/${run.metrics.reviewed}`]] as [string, string][])
               : ([['Cache hits', run.metrics.cacheHits]] as [string, number][])),
-            ['Elapsed', elapsed(run.metrics.elapsedMs)],
+            ['Elapsed', elapsed(elapsedMs)],
           ].map(([label, value]) => (
             <div key={label as string} className="flex flex-col gap-0.5 p-4">
               <dt className="label">{label as string}</dt>
