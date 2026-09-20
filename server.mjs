@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { createRun, evolveRun, LIMITS, validateBrief } from './lib/evolution.mjs';
 import * as defaultProviders from './lib/providers.mjs';
 import { ingestMedia, getUploadedAsset, assetsDir, MAX_MEDIA_BYTES } from './lib/media.mjs';
+import { getRunMaps, startRunMaps, watchRunMaps } from './lib/run-maps.mjs';
+import { DEFAULT_GRID } from './lib/grid.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, 'data', 'runs');
@@ -146,12 +148,39 @@ export async function createAppServer({ providers = defaultProviders, dataDir = 
         }).finally(() => active.delete(run.id));
         return;
       }
-      const route = pathname.match(/^\/api\/runs\/([a-f\d-]{36})(?:\/(cancel|export))?$/i);
+      const route = pathname.match(/^\/api\/runs\/([a-f\d-]{36})(?:\/(cancel|export|maps|maps\/stream))?$/i);
       if (route) {
         const run = runs.get(route[1]);
         if (!run) return json(response, 404, { error: 'Run not found.' });
         if (request.method === 'GET' && !route[2]) return json(response, 200, run);
         if (request.method === 'GET' && route[2] === 'export') return json(response, 200, run, { 'Content-Disposition': `attachment; filename="evolve-${run.id}.json"` });
+        // Maps belong to the run that produced the images. Building is long, so
+        // this starts a detached job and answers immediately; progress is read
+        // back from the stream below.
+        if (request.method === 'POST' && route[2] === 'maps') {
+          if (run.status === 'running') return json(response, 409, { error: 'Wait for the run to finish before building its maps.' });
+          const grid = Number(url.searchParams.get('grid')) || DEFAULT_GRID;
+          return json(response, 202, startRunMaps(run, { grid }));
+        }
+        if (request.method === 'GET' && route[2] === 'maps') return json(response, 200, getRunMaps(run.id) ?? { runId: run.id, status: 'idle', targets: [] });
+        // Server-sent events rather than polling: the interesting thing is the
+        // map filling in pass by pass, and a poll interval either misses passes
+        // or hammers the server between them.
+        if (request.method === 'GET' && route[2] === 'maps/stream') {
+          response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+          const send = job => response.write(`data: ${JSON.stringify(job)}\n\n`);
+          const current = getRunMaps(run.id);
+          if (current) send(current);
+          const stop = watchRunMaps(run.id, job => {
+            send(job);
+            if (job.status === 'complete' || job.status === 'failed') { stop(); response.end(); }
+          });
+          // Proxies drop a silent stream, and this one is silent for a whole
+          // GPU pass at a time.
+          const beat = setInterval(() => response.write(': keep-alive\n\n'), 15_000);
+          request.on('close', () => { clearInterval(beat); stop(); });
+          return;
+        }
         if (request.method === 'POST' && route[2] === 'cancel') {
           active.get(run.id)?.abort(new DOMException('User cancelled the run.', 'AbortError'));
           return json(response, 200, { id: run.id, status: active.has(run.id) ? 'cancelling' : run.status });
