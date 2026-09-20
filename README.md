@@ -1,71 +1,172 @@
-# Advolve — image and video ad evolution
+<div align="center">
 
-Cloudflare migration: see [deployment and credential setup](docs/CLOUDFLARE_DEPLOY.md).
-The Worker implementation lives in `cloudflare/`; local Node hosting remains available.
+<img src="advolve.png" width="240" height="240">
 
-Generate ad takes, review the actual media, then evolve the strongest takes using TRIBE neural scoring. Images use OpenAI image generation; videos use **Seedance 2.0 through Pika**. Research, concept writing and media review use OpenAI.
+Evolve your ads.
 
-## Run locally
+[![GitHub stars](https://img.shields.io/github/stars/LargoLardo/htn-2026-ad-evolve?style=social)](https://github.com/LargoLardo/htn-2026-ad-evolve)
+[![GitHub forks](https://img.shields.io/github/forks/LargoLardo/htn-2026-ad-evolve?style=social)](https://github.com/LargoLardo/htn-2026-ad-evolve/network/members)
 
-Requires Node 22+ and FFmpeg. The Node API has no npm dependencies; the Next.js interface has its own locked dependencies in `web/`.
+</div>
 
-```sh
+---
+
+**Stop guessing which ad creative works. Evolve it.**
+
+Advolve generates ad variations, reviews the actual pixels, then uses an evolutionary algorithm guided by TRIBE neural scoring to breed stronger creatives generation over generation. Images use OpenAI; videos use Seedance 2.0 through Pika. Every take is scored by predicted cortical response, not heuristics.
+
+## Key Features
+
+### Evolutionary Creative Engine
+
+Describe your product, and Advolve runs a full evolutionary loop over your ad creatives.
+
+- **Research and Concepting**: Researches your brief, generates concepts and renders a population of ad takes with an 8-gene genome (hook, visual, emotion, proof, CTA, palette, motion, audio).
+- **Automated Review**: Reviews actual pixels, copy, product visibility, claims and brief alignment. Video review samples six frames and transcribes audio with Whisper.
+- **Neural Scoring**: Shortlisted takes are scored by TRIBE, a neuroscience model that predicts cortical response across four Glasser parcel families.
+- **Selection and Breeding**: Ranks takes by neural score, retains the winner, applies crossover and single-gene mutation to produce the next generation.
+- **Manual Gates**: Optionally pause between rounds to hand-pick parents, kill weak nodes and edit the brief before the next generation breeds.
+
+### Brain Visualizer
+
+Explore what the neural model sees, mapped onto an interactive 3D cortical surface.
+
+- **3D Cortex**: Three.js rendering of the Glasser parcellation with per-parcel activation heatmaps.
+- **Four Families**: Auditory engagement, language/message, attention/salience and visual/motion, each a group of Glasser parcels.
+- **Keyboard Navigation**: Select parcels and families from the keyboard; activation values update live.
+
+### Impact and Attention Maps
+
+Understand which elements of your ad are doing the work and which are dead weight.
+
+- **Attention Map**: DeepGaze IIE predicts where people look, reduced to the same detected elements as the impact map.
+- **Impact Map**: Occludes each detected element one at a time and measures the neural score delta.
+- **Gap View**: Normalizes both maps and shows the difference. High attention + low impact means an element draws the eye but does nothing.
+
+## Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| Frontend framework | Next.js, React, TypeScript |
+| 3D visualization | Three.js (brain cortex renderer) |
+| Backend | Node.js 22+, zero npm dependencies |
+| Media processing | FFmpeg (occlusion masking, video frames, audio) |
+| Image generation | OpenAI `gpt-image-2.5-flare` |
+| Video generation | Seedance 2.0 via Pika REST API |
+| Neural scoring | TRIBE worker on Baseten (L4 GPU) |
+| Attention model | DeepGaze IIE (PyTorch, Baseten) |
+| AI research/review | OpenAI `gpt-6-astra` |
+| Cloudflare deployment | Workers, D1, R2, Durable Objects, Queues, Workflows |
+| Python worker | NumPy, Pillow, PyTorch, Hugging Face |
+
+## How It Works
+
+### Evolution loop
+
+```
+Brief + product description
+  -> Research the category and competitors
+  -> Generate population of ad takes (8-gene genome)
+  -> Review actual media (pixels, copy, claims)
+  -> Score shortlist with TRIBE neural model
+  -> Rank by cortical response, retain winner
+  -> Crossover + single-gene mutation -> next generation
+  -> Repeat for N rounds
+```
+
+### Impact map pipeline
+
+```
+Original ad image
+  -> Detect elements (objects, text, logos)
+  -> Score the unmodified original with TRIBE
+  -> Occlude each element, re-score
+  -> Delta = how much each element contributes
+  -> Overlay with DeepGaze attention density
+  -> Gap = where people look vs. what actually matters
+```
+
+## Quick Start
+
+```bash
+# 1. Install (backend has zero npm deps)
+npm install
+cd web && npm install && cd ..
+
+# 2. Configure environment
 cp .env.example .env
-# Set credentials and the updated TRIBE worker endpoint in .env.
-npm start  # API on 127.0.0.1:3000
+# Set OPENAI_API_KEY (minimum for image generation and review)
+# Set PIKA_API_KEY for video generation
+# Set BASETEN_TRIBE_ENDPOINT + BASETEN_API_KEY for neural scoring
+
+# 3. Start backend
+npm run dev          # API on localhost:3000
+
+# 4. Start frontend (separate terminal)
+npm run dev --prefix web   # UI on localhost:3001
 ```
 
-In another terminal:
+Open http://localhost:3001. The Next.js frontend proxies API requests to the backend.
 
-```sh
-npm ci --prefix web
-npm run dev --prefix web  # interface on 127.0.0.1:3001
+## Environment Variables
+
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `OPENAI_API_KEY` | Image generation, research, review | Yes |
+| `OPENAI_TEXT_MODEL` | Text model override (default: `gpt-6-astra`) | No |
+| `OPENAI_IMAGE_MODEL` | Image model override (default: `gpt-image-2.5-flare`) | No |
+| `PIKA_API_KEY` | Seedance 2.0 video generation | No |
+| `BASETEN_TRIBE_ENDPOINT` | TRIBE neural scoring endpoint | No |
+| `BASETEN_API_KEY` | Baseten API authentication | No |
+| `TRIBE_SCORE_URL` | Alternative scoring URL (same JSON contract) | No |
+| `TRIBE_TOKEN` | Optional Bearer token for scoring | No |
+| `FFMPEG_BIN` | FFmpeg executable path (default: `ffmpeg`) | No |
+| `MEDIA_SERVICE_URL` | DeepGaze attention service (Baseten) | No |
+
+## Repo Layout
+
 ```
-
-Open http://127.0.0.1:3001. The Next.js interface proxies API requests and media to the backend. Set `EVOLVE_API_ORIGIN` for the Next.js process if the backend uses another address. For a production build, run `npm run build --prefix web`, then `npm start --prefix web`. The server binds to loopback only. It stores media, runs and caches under ignored `data/` directories.
-
-Set `OPENAI_API_KEY` for research, images and review, `PIKA_API_KEY` for video generation, and `BASETEN_TRIBE_ENDPOINT` / `BASETEN_API_KEY` for neural scoring. Alternatively, `TRIBE_SCORE_URL` / `TRIBE_TOKEN` can address a worker implementing the same JSON contract. `FFMPEG_BIN` can override the FFmpeg executable. Configuration indicators only check settings; they do not wake a GPU or validate credentials.
-
-**Live runs require the matching GPU worker.** The TRIBE worker has been verified with real image and video inference on Baseten's `L4:2x24x96` instance. Configure the app with an endpoint deployed from this source; older pooled-feature endpoints cannot provide these scores. Experimental decoder training remains paused. See [worker setup and scoring](worker/README.md).
-
-## Evolution loop
-
-1. Choose image or video ads and optionally upload an original. Images accept PNG, JPEG or WebP. Videos accept MP4, 1–60 seconds. Uploads are limited to 50 MiB and 4096 pixels per dimension.
-2. Research the brief once. If an original is supplied, review its observed copy, visual tags and audio transcript to ground new concepts.
-3. Generate the population. Seedance videos use 720p, 4–15 seconds (default 10), and portrait, landscape or square format. Image takes are 1024×1024. The genome includes hook, visual, emotion, proof, CTA, palette, motion and audio.
-4. Review actual pixels, copy, product visibility, supported claims and brief alignment. Video review samples six frames and transcribes audio with Whisper; it does **not** assess every frame or motion smoothness. All checks must pass and quality/alignment must each reach 60. The shortlist uses review scores and observed visual diversity.
-5. Evaluate at most K shortlisted takes per generation with TRIBE. An uploaded original receives one additional baseline evaluation. Without an upload, the first shortlisted take becomes the original. That original stays fixed throughout the run.
-6. Rank evaluated, reviewed takes by overall neural score. Review quality breaks exact neural ties. Retain the winner and use crossover and exactly one gene mutation per child to produce the next generation. Emotion sliders guide concepts; they do not change neural score weights.
-
-If every review fails, retain a **nonempty provisional shortlist**. Failed checks remain visible and failed; provisional drafts compete only while no reviewed neural candidates are available. They are marked as needing review, including in the final results. A shortlist of one may produce fewer than three distinct finalists.
-
-## Neural scoring
-
-The scoring implementation uses the same Glasser parcel groups, original-media temporal normalization, parcel-balanced averages, four equally weighted families, clipping and NumPy/Python rounding as the upstream TRIBE worker.
-
-Each image becomes a 10-second silent video during inference. Both media types then use shorter-side-256 preprocessing and TRIBE's video/audio/transcript event assembly. Full time series are scored; predictions are no longer pooled before normalization.
-
-The four families are auditory engagement, language/message, attention/salience and visual/motion. Their average is a predicted cortical-response proxy, **not a validated emotion, preference or conversion score**. A score of 50 is the transform's zero-z midpoint; self-normalization does not guarantee exactly 50 after clipping. Scores from runs with different originals are not directly comparable.
-
-The old keyword heuristic, OASIS reference percentiles and Yeo spatial-correlation scoring code have been removed. Historical saved runs keep their original scores and are labeled as historical. Fitted-decoder training remains [paused experimental work](experimental/README.md).
-
-## Caching and cancellation
-
-- Generation jobs and downloaded Seedance media persist. Cancelling stops local polling; it does not cancel a job already submitted to Pika. Retrying the same prompt/settings resumes the saved job. Completed jobs reuse their media.
-- Review caches include the media bytes, brief, required copy, reviewer model and rubric version.
-- Neural score caches include media bytes, endpoint, scoring contract and original-baseline identity. Baseline statistics and identities are checksum-validated. The worker separately caches full predictions, so a different original can reuse inference and recompute only the score.
-- Completed media and evaluations remain on disk after cancellation. No new work is scheduled after cancellation is observed. A remote call already submitted may still finish or incur provider charges.
-
-Seedance follows [Pika's model-specific REST specification](https://mcp.pika.art/llms/bytedance/seedance-2.0/text-to-video). OpenAI is retained for images, text and [audio transcription](https://developers.openai.com/api/docs/guides/speech-to-text). No Sora integration is used.
+.
+├── cloudflare/          Cloudflare Workers deployment
+│   ├── src/             Worker API, queue consumer, workflows, storage
+│   ├── tests/           Vitest integration tests
+│   ├── migrations/      D1 schema migrations
+│   └── scripts/         Provisioning and deploy script
+├── deploy/              Baseten model configurations
+│   ├── baseten/         TRIBE scoring service
+│   └── baseten-media/   DeepGaze + FFmpeg media service
+├── docs/                Architecture and deployment docs
+├── experimental/        Brain mesh export, paused decoder training
+├── lib/                 Shared engine (evolution, scoring, maps, providers, grid)
+├── maps/                Python saliency module (DeepGaze grid parity)
+├── scripts/             Build and smoke test scripts
+├── server.mjs           Node.js API server (zero dependencies)
+├── tests/               Node test suite (engine, providers, media, scoring)
+├── training/            OASIS data prep and training tests (paused)
+├── web/                 Next.js frontend
+│   ├── app/             Pages and routing
+│   ├── components/      Dashboard, brain visualizer, maps, layout
+│   └── lib/             Types, scoring utilities, backend proxy
+├── worker/              TRIBE Python worker (scoring, spec, calibration)
+└── .env.example         Environment template
+```
 
 ## Verification
 
-```sh
-npm run check
-npm run build --prefix web
-npm test
-.venv/bin/python -m unittest worker.test_neural training.test_training training.test_pause
-npm run smoke  # existing local server; no generation or GPU calls
+```bash
+npm run check                  # syntax check all modules
+npm run build --prefix web     # production frontend build
+npm test                       # Node test suite (requires FFmpeg)
+npm run smoke                  # smoke test against running server
+
+# Python tests (requires NumPy, Pillow)
+python -m unittest worker.test_neural training.test_training
 ```
 
-Node tests require FFmpeg. Python tests need NumPy and Pillow plus the existing training test dependencies. Tests cover score parity, shared baselines, uploads, streaming ranges, video review, Pika job reuse/cancellation, cache corruption, evolution, and nonempty shortlist fallback. Paid generation and GPU inference need a separately configured live check; offline parity does not establish identical model predictions across runtimes or human-response validity.
+## Team
+
+Shawn Wei, Ethan Yang, William Yang, Logan Zhao
+
+## License
+
+MIT. Built for Hack the North 2026.
