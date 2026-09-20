@@ -3,7 +3,7 @@ import { evolveRun } from '../../lib/evolution.mjs';
 import { impactNotes } from '../../lib/grid.mjs';
 import { cloudProviders } from './providers.mjs';
 import { runDocument } from './storage.mjs';
-import { scoreQueued } from './percept-queue.mjs';
+import { scoreQueued } from './neural-queue.mjs';
 import { mapAsset, saveMap } from './maps.mjs';
 import { isInterruption } from './interruption.mjs';
 

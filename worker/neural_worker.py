@@ -10,19 +10,19 @@ import tempfile
 import numpy as np
 
 try:
-    from .percept_score import checked_predictions, decode_reference, encode_reference, parcel_traces, summarize
+    from .neural_score import checked_predictions, decode_reference, encode_reference, parcel_traces, summarize
 except ImportError:
-    from percept_score import checked_predictions, decode_reference, encode_reference, parcel_traces, summarize
+    from neural_score import checked_predictions, decode_reference, encode_reference, parcel_traces, summarize
 
 ROOT = Path(__file__).resolve().parent
 MAX_BYTES = 50 * 1024 * 1024
 
 
 def contract():
-    raw = (ROOT / 'percept_spec.json').read_bytes()
+    raw = (ROOT / 'neural_spec.json').read_bytes()
     value = json.loads(raw)
     if hashlib.sha256((ROOT / 'assets/glasser-fsaverage5.json').read_bytes()).hexdigest() != value['atlas_sha256']:
-        raise ValueError('Percept atlas does not match the scoring contract.')
+        raise ValueError('Atlas does not match the scoring contract.')
     return value, hashlib.sha256(raw).hexdigest()
 
 
@@ -67,7 +67,7 @@ def extract_media(candidate, model, cache, contract_hash, runtime):
     if digest != candidate.get('media_hash'):
         raise ValueError('Media hash mismatch.')
     key = hashlib.sha256(json.dumps([digest, media_type, contract_hash, runtime], sort_keys=True).encode()).hexdigest()
-    path = Path(cache) / 'percept' / f'{key}.npz'
+    path = Path(cache) / 'neural' / f'{key}.npz'
     if path.exists():
         with np.load(path, allow_pickle=False) as saved:
             predictions = checked_predictions(saved['predictions'])
@@ -84,7 +84,7 @@ def extract_media(candidate, model, cache, contract_hash, runtime):
             source.write_bytes(raw)
             validate_video(source)
         infer_path = folder / 'inference.mp4'
-        # Match Percept's default shorter-side=256 preprocessing, preserving
+        # Default shorter-side=256 preprocessing, preserving
         # aspect ratio and audio. Both still presentations and video use it.
         ffmpeg(['-i', str(source), '-vf', "scale='if(gt(iw,ih),-2,min(256,iw))':'if(gt(iw,ih),min(256,ih),-2)'",
             '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac',
@@ -104,7 +104,7 @@ def extract_media(candidate, model, cache, contract_hash, runtime):
 def score_batch(request, model, cache, runtime):
     spec, contract_hash = contract()
     if request.get('contract_hash') != contract_hash:
-        raise ValueError('Percept scoring contract mismatch; update the worker and app together.')
+        raise ValueError('Scoring contract mismatch; update the worker and app together.')
     candidates = request.get('candidates')
     if not isinstance(candidates, list) or not 1 <= len(candidates) <= 4:
         raise ValueError('Send 1–4 candidates.')
@@ -122,10 +122,10 @@ def score_batch(request, model, cache, runtime):
             reference = decode_reference(baseline, contract_hash, runtime)
         score = summarize(predictions, reference, tr=tr)
         score.update(parcels=parcel_traces(predictions, reference),
-            source='tribe-percept', contractHash=contract_hash, version=spec['version'],
+            source='tribe-neural', contractHash=contract_hash, version=spec['version'],
             baselineHash=baseline['hash'], baselineMediaHash=baseline['mediaHash'], confidence=None,
-            provenance='Percept scoring: original-media temporal z scores, bilateral Glasser parcel means, four equally weighted families. Predicted cortical response; not a validated emotion or conversion score.')
+            provenance='Neural scoring: original-media temporal z scores, bilateral Glasser parcel means, four equally weighted families. Predicted cortical response; not a validated emotion or conversion score.')
         results.append(dict(id=candidate['id'], media_hash=candidate['media_hash'], neural=score,
             metadata=dict(runtime_versions=runtime, prediction_hash=prediction_hash, cached=cached,
-                protocol=spec['protocol'], percept_revision=spec['percept_revision'])))
+                protocol=spec['protocol'], neural_revision=spec['neural_revision'])))
     return dict(contract_hash=contract_hash, baseline=baseline, results=results)

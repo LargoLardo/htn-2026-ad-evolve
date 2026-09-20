@@ -42,7 +42,7 @@ thing this interface has done, so element verdicts are words now.
 - **Attention** is predicted gaze from DeepGaze IIE. It is free, runs on CPU,
   and is a continuous 1024px density served as a PNG with the density in the
   alpha channel.
-- **Impact** is measured: hide one element of the ad, rescore it with Percept
+- **Impact** is measured: hide one element of the ad, rescore it with TRIBE
   on a GPU, and see how far the score moved. One pass per element, about two
   minutes each, so a map is roughly half an hour.
 - **The gap** is attention minus impact, per element. An element that gets
@@ -95,7 +95,7 @@ which implied the opposite.
 ```
 
 **The trap.** `elements` is sorted by gap. `impact.maps[family]` is in
-detection order. To show a different Percept family without another GPU pass
+detection order. To show a different neural family without another GPU pass
 you must index `impact.maps[family]` by `element.order`, not by the element's
 position in the list. Getting this wrong silently mislabels everything.
 
@@ -117,7 +117,7 @@ width and height, not by `width`/`height` from the artifact.
 ## Things that will look like bugs and are not
 
 - **Half the nodes say `not scored`.** Only the shortlist reaches the GPU,
-  because a Percept pass costs about two minutes. This is intended to change.
+  because a TRIBE pass costs about two minutes. This is intended to change.
 - **Ads score below the original.** The node bar is 0-100 with the uploaded
   original ticked at 50, and a clean ad landing left of that tick is expected.
   The metric is response magnitude, and clutter maximises it.

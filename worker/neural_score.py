@@ -1,6 +1,5 @@
-"""Independent implementation of Percept's published scoring mathematics.
+"""Neural scoring mathematics for TRIBE cortical predictions.
 
-Parity target: edrlu/Percept worker/app.py at 000f26d529e0b87b2478142bd8b5ebf40e44e313.
 No fitted decoder, spatial correlations, reference photograph percentiles or Yeo maps.
 """
 import base64
@@ -33,10 +32,10 @@ def family_parcels(atlas):
         names = set()
         for pattern in patterns:
             matched = [name for name in atlas if name.startswith(pattern[:-1])] if pattern.endswith('*') else [name for name in atlas if name.endswith(pattern[1:])] if pattern.startswith('*') else [name for name in atlas if name == pattern]
-            names.update(matched)  # Some published patterns match no current atlas parcel, as in Percept.
+            names.update(matched)
         groups.append({name: atlas[name] for name in sorted(names)})
     if any(not group or any(not len(v) for v in group.values()) for group in groups):
-        raise ValueError('Empty Percept family or parcel.')
+        raise ValueError('Empty neural family or parcel.')
     return groups
 
 
@@ -57,7 +56,7 @@ def summarize(predictions, reference=None, atlas=None, tr=1.0):
     mu, sd = reference if reference is not None else reference_stats(values)
     z = (values - np.asarray(mu).reshape(1, -1)) / np.maximum(np.asarray(sd).reshape(1, -1), 1e-6)
     groups = family_parcels(load_atlas() if atlas is None else atlas)
-    # Match Percept's float64 normalization, float32 traces, then Python/NumPy
+    # Float64 normalization, float32 traces, then Python/NumPy
     # rounding. Overall uses the already rounded family scores.
     traces = np.empty((4, len(values)), dtype=np.float32)
     for index, parcels in enumerate(groups):
@@ -84,7 +83,7 @@ def parcel_traces(predictions, reference=None, atlas=None):
 
     Same normalization and scaling as the family traces, so a family's score is the
     mean of its parcels here. summarize() is left untouched: its output is compared
-    against the upstream Percept oracle fixture.
+    against the upstream oracle fixture.
     """
     values = checked_predictions(predictions)
     mu, sd = reference if reference is not None else reference_stats(values)

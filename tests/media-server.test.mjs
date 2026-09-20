@@ -28,7 +28,7 @@ test('upload, video seeking, original baseline and evolutionary API flow work to
   let baseline, originalHash, rendered = 0;
   const providers = {
     capabilities: () => ({ liveResearch: true, liveImages: true, liveVideos: true, tribe: true }),
-    getNeuralConfig: () => ({ hash: 'contract', version: 'percept-test' }),
+    getNeuralConfig: () => ({ hash: 'contract', version: 'neural-test' }),
     research: async () => ({ insights: [], sources: [], summary: 'Test' }),
     generateConcepts: async (brief, research, { count, parents }) => {
       assert.equal(research.originalMedia.transcript, 'Original speech');
@@ -47,7 +47,7 @@ test('upload, video seeking, original baseline and evolutionary API flow work to
         baseline = { hash: 'baseline', mediaHash: originalHash, contractHash: 'contract' };
       } else assert.deepEqual(options.baseline, baseline);
       return { baseline, calls: 1, results: candidates.map(c => ({ id: c.id, mediaHash: c.asset.mediaHash,
-        neural: { source: 'tribe-percept', engagementScore: c.original ? 50 : 70, baselineHash: baseline.hash, baselineMediaHash: originalHash, contractHash: 'contract', provenance: 'TEST' } })) };
+        neural: { source: 'tribe-neural', engagementScore: c.original ? 50 : 70, baselineHash: baseline.hash, baselineMediaHash: originalHash, contractHash: 'contract', provenance: 'TEST' } })) };
     },
   };
   const server = await createAppServer({ providers, dataDir: join(dir, 'runs') });

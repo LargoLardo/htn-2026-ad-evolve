@@ -4,7 +4,7 @@ import { toPixels } from '../../lib/grid.mjs';
 import { accountStore } from './storage.mjs';
 import { createMedia, callMediaService } from './media.mjs';
 import { cloudProviders } from './providers.mjs';
-import { scoreQueued } from './percept-queue.mjs';
+import { scoreQueued } from './neural-queue.mjs';
 import { isInterruption } from './interruption.mjs';
 
 export async function mapAsset(env, context, step, prefix, asset, brief, { onProgress = async () => {}, baseline, contractHash } = {}) {

@@ -7,7 +7,7 @@ import type { Candidate, NeuralScore, Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import BrainCanvas, { MAX_PARCELS } from './BrainCanvas';
 
-/** Family order and colours come from worker/percept_score.py, so the surface, the
+/** Family order and colours match the scoring worker, so the surface, the
  *  legend and the traces all name the same four families. */
 const FAMILIES = [
   { key: 'auditory_engagement', color: '#ffb13b' },
@@ -103,7 +103,7 @@ export default function BrainView({ run }: { run: Run }) {
     return () => cancelAnimationFrame(request);
   }, [duration, frames, playing, selected?.id]);
 
-  // Without Percept data there is nothing to replay, so the families breathe gently
+  // Without neural data there is nothing to replay, so the families breathe gently
   // and the panel says so.
   const [idlePhase, setIdlePhase] = useState(0);
   useEffect(() => {
@@ -236,12 +236,12 @@ export default function BrainView({ run }: { run: Run }) {
                   <span className="text-xl text-white/50">/100</span>
                 </span>
                 <span className="max-w-[30ch] text-xs text-white/60">
-                  Percept overall · 50 matches the original creative
+                  Neural overall · 50 matches the original creative
                 </span>
               </>
             ) : (
               <span className="max-w-[28ch] text-xs text-white/60">
-                No Percept score for this run.
+                No neural score for this run.
               </span>
             )}
           </div>
@@ -252,7 +252,7 @@ export default function BrainView({ run }: { run: Run }) {
                 Illustrative — not model output
               </p>
               <p className="mt-1 text-[11px] text-white/50">
-                The four Percept families are shown breathing. Nothing here was predicted from an ad.
+                The four neural families are shown breathing. Nothing here was predicted from an ad.
               </p>
             </div>
           )}
@@ -318,7 +318,7 @@ export default function BrainView({ run }: { run: Run }) {
             </ul>
           ) : (
             <p className="text-xs text-foreground-lighter">
-              Family traces appear once a run is scored with the Percept worker.
+              Family traces appear once a run is scored with the TRIBE worker.
             </p>
           )}
           {detail ? (

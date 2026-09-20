@@ -60,7 +60,7 @@ performance.**
 
 ## Parallelism, and the trap
 
-Percept is the bottleneck: about **119 seconds per stimulus** on one L4.
+TRIBE is the bottleneck: about **119 seconds per stimulus** on one L4.
 
 **Several API keys do not help.** A key is only auth. The TRIBE model has to
 be deployed in that workspace, so another account means another deployment of
@@ -72,7 +72,7 @@ the same model for the same effect.
    with `min_replica` and `max_replica` set to N.
 2. **Poll until `active_replica_count` actually reaches N.** Baseten scales
    reactively over about 60 seconds.
-3. Only then set `PERCEPT_CONCURRENCY=N`.
+3. Only then set `TRIBE_CONCURRENCY=N`.
 
 Step 2 is not optional and skipping it is how this failed repeatedly. Firing
 N concurrent requests at one replica queues them behind each other, and
@@ -95,7 +95,7 @@ The clip length is **not** in this repo's runtime path. It is hardcoded in the
 worker that runs on Baseten:
 
 ```python
-# worker/percept_worker.py
+# worker/neural_worker.py
 ffmpeg([... , *(['-t', '10'] if media_type == 'image' else []), str(infer_path)])
 ```
 

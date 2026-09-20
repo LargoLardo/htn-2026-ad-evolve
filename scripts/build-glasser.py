@@ -1,4 +1,4 @@
-"""Build the small atlas used by Percept; downloads annotations, never model weights."""
+"""Build the small atlas used by the scoring worker; downloads annotations, never model weights."""
 import hashlib
 import json
 from pathlib import Path

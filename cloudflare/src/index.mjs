@@ -3,7 +3,7 @@ import { createRun, validateBrief, LIMITS } from '../../lib/evolution.mjs';
 import { createMedia, serveAsset, MAX_IMAGE_BYTES, MAX_MEDIA_BYTES } from './media.mjs';
 import { cloudProviders } from './providers.mjs';
 import { accountStore, listRuns, runDocument } from './storage.mjs';
-import { consumePercept } from './percept-queue.mjs';
+import { consumeNeural } from './neural-queue.mjs';
 export { RunDocument } from './run-document.mjs';
 export { EvolutionWorkflow, MapWorkflow } from './workflows.mjs';
 
@@ -98,4 +98,4 @@ export async function fetchApi(request, env) {
     throw new HttpError(404, 'Route not found.');
   } catch (error) { return json({ error: error.status ? error.message : 'The hosted API could not complete this request.' }, error.status || 500); }
 }
-export default { fetch: fetchApi, queue: consumePercept };
+export default { fetch: fetchApi, queue: consumeNeural };

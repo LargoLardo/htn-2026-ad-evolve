@@ -21,7 +21,7 @@ URL = "https://benedekkurdi.com/oasis.php"
 ARCHIVE_SHA256 = "d17ff678cc9b2da5b0ff042c1ba3f1df16399b11f7e92e8706c277c82202bf8f"
 
 
-def perceptual_hash(raw):
+def visual_hash(raw):
     with Image.open(io.BytesIO(raw)) as image:
         gray = np.asarray(image.convert("L").resize((32, 32), Image.Resampling.LANCZOS))
     coefficients = dctn(gray.astype(float), norm="ortho")[:8, :8].ravel()[1:]
@@ -41,7 +41,7 @@ def assign_splits(rows, seed):
     for i, row in enumerate(rows):
         for j in range(i):
             other = rows[j]
-            similar = (int(row["perceptual_hash"], 16) ^ int(other["perceptual_hash"], 16)).bit_count() <= 4
+            similar = (int(row["visual_hash"], 16) ^ int(other["visual_hash"], 16)).bit_count() <= 4
             if row["theme_group"] == other["theme_group"] or row["media_hash"] == other["media_hash"] or similar:
                 parent[root(i)] = root(j)
                 if similar and row["theme_group"] != other["theme_group"]:
@@ -90,7 +90,7 @@ def prepare(archive, output, seed=42, feature_spec=None):
                 "theme_group": re.sub(r"\s+\d+$", "", theme).casefold(),
                 "category": raw_row["Category"], "source": raw_row["Source"],
                 "source_sha256": hashlib.sha256(raw).hexdigest(), "media_hash": hashlib.sha256(png).hexdigest(),
-                "perceptual_hash": f"{perceptual_hash(raw):016x}", "original_ratings": ratings,
+                "visual_hash": f"{visual_hash(raw):016x}", "original_ratings": ratings,
                 "ratings": {key: (value - 1) * 100 / 6 for key, value in ratings.items()},
                 "rating_counts": {label: int(raw_row[label.title() + "_N"]) for label in ratings}})
     matches = assign_splits(rows, seed)

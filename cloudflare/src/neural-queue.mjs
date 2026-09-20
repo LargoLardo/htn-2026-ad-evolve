@@ -6,12 +6,12 @@ export async function scoreQueued(env, context, step, name, candidates, brief, {
   const store = accountStore(env, context.accountId), results = []; let calls = 0;
   for (const candidate of candidates) {
     const id = sha256(stable([context.workflowId, name, candidate.id, candidate.asset.mediaHash, baseline?.hash || 'self', contractHash]));
-    const eventType = `percept-${id.slice(0, 48)}`;
+    const eventType = `neural-${id.slice(0, 48)}`;
     const queueStep = `${name}-${candidate.id}`;
     await step.do(`${queueStep}-enqueue`, async () => {
       await runDocument(env, context.accountId, context.runId).assertActive();
       await store.putJson(`jobs/${id}.json`, { candidate, brief, baseline, contractHash });
-      await env.PERCEPT.send({ ...context, jobId: id, eventType });
+      await env.NEURAL.send({ ...context, jobId: id, eventType });
     });
     await step.waitForEvent(`${queueStep}-ready`, { type: eventType, timeout: '2 hours' });
     const scored = await step.do(`${queueStep}-result`, async () => {
@@ -29,8 +29,8 @@ export async function scoreQueued(env, context, step, name, candidates, brief, {
 async function ready(env) {
   const endpoint = env.TRIBE_SCORE_URL || env.BASETEN_TRIBE_ENDPOINT;
   const match = /^https:\/\/model-([a-z0-9]+)\.api\.baseten\.co\/deployment\/([a-z0-9]+)\/predict$/.exec(endpoint || '');
-  const target = Number(env.PERCEPT_CONCURRENCY || 1);
-  if (!Number.isInteger(target) || target < 1 || target > 8) throw new Error('Invalid Percept concurrency.');
+  const target = Number(env.TRIBE_CONCURRENCY || 1);
+  if (!Number.isInteger(target) || target < 1 || target > 8) throw new Error('Invalid TRIBE concurrency.');
   if (!match) { if (target !== 1) throw new Error('Replica readiness cannot be verified for this endpoint.'); return true; }
   const headers = { Authorization: `Api-Key ${env.BASETEN_API_KEY}` };
   const response = await fetch(`https://api.baseten.co/v1/models/${match[1]}/deployments/${match[2]}`, { headers, signal: AbortSignal.timeout(20_000) });
@@ -44,7 +44,7 @@ async function ready(env) {
   return false;
 }
 
-export async function consumePercept(batch, env) {
+export async function consumeNeural(batch, env) {
   // max_batch_size and max_concurrency are both 1 in the deployed configuration.
   for (const message of batch.messages) {
     const task = message.body, store = accountStore(env, task.accountId);

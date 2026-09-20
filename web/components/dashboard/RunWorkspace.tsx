@@ -11,7 +11,7 @@ import LineageTree from './LineageTree';
 import { assetLink, exportHref, safeLink } from '@/lib/api';
 import { type Candidate, type Run, type RunStage } from '@/lib/types';
 import MediaPreview from './MediaPreview';
-import { compareCandidates, isPercept, scoreDisplay, selectionScore } from '@/lib/scores';
+import { compareCandidates, isNeural, scoreDisplay, selectionScore } from '@/lib/scores';
 import { cn } from '@/lib/utils';
 
 const STAGE_TEXT: Record<RunStage, string> = {
@@ -61,7 +61,7 @@ const clamp = (value?: number | null) =>
   Math.min(100, Math.max(0, typeof value === 'number' && Number.isFinite(value) ? value : 0));
 
 // Keep short cached runs readable without rounding away their duration.
-// Runs are minutes long, not seconds: a single Percept pass alone is about two
+// Runs are minutes long, not seconds: a single scoring pass alone is about two
 // minutes. Reporting 1520.5s for a 25 minute run is accurate and unreadable,
 // so past a minute this switches to minutes and past an hour to hours.
 const elapsed = (ms: number) => {
@@ -86,7 +86,7 @@ export default function RunWorkspace({
   const [inspecting, setInspecting] = useState<Candidate | null>(null);
 
   // The server writes metrics at stage boundaries, so elapsedMs sits still for
-  // the whole of a Percept call, which is about two minutes. A timer that
+  // the whole of a scoring call, which is about two minutes. A timer that
   // freezes for two minutes reads as a hung run, so while a run is live this
   // counts from its start time instead and only defers to the recorded figure
   // once the run is over and that figure is final.
@@ -98,7 +98,7 @@ export default function RunWorkspace({
   }, [running]);
   // metrics.elapsedMs is only written when a stage changes, so on a finished
   // run it stops at the last stage boundary rather than at the end, and while
-  // one is live it sits still for the two minutes a Percept pass takes. Both
+  // one is live it sits still for the two minutes a scoring pass takes. Both
   // under-report. The event log has real timestamps, so measure the span that
   // actually happened and fall back to the recorded figure only when there is
   // nothing to measure.
@@ -174,7 +174,7 @@ export default function RunWorkspace({
       {run.gate && run.gate.status !== 'resolved' && running && <RoundGate key={run.gate.token} run={run} gate={run.gate} />}
 
       <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
-        {isPercept(run) ? 'Percept overall / 100: four equally weighted Glasser families, normalized against one original creative, where 50 is parity with it. This is the magnitude of the predicted cortical response, and selection currently takes the largest. A larger response is not evidence of a better ad: a cluttered original with a wall of body text scores highly because it is taxing to read. Predicted response only, not measured emotion, engagement or conversions.' : 'Historical run: these recorded scores use an earlier method, not Percept scoring.'}
+        {isNeural(run) ? 'Neural overall / 100: four equally weighted Glasser families, normalized against one original creative, where 50 is parity with it. This is the magnitude of the predicted cortical response, and selection currently takes the largest. A larger response is not evidence of a better ad: a cluttered original with a wall of body text scores highly because it is taxing to read. Predicted response only, not measured emotion, engagement or conversions.' : 'Historical run: these recorded scores use an earlier method.'}
         {run.requiresReview && ' No drafts passed review. The retained provisional drafts need review and revision.'}
       </p>
 
@@ -302,7 +302,7 @@ function FitnessChart({ run }: { run: Run }) {
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface-100 p-5">
-      <h3 className="label">{isPercept(run) ? 'Percept score by round' : 'Historical scores by round'}</h3>
+      <h3 className="label">{isNeural(run) ? 'Neural score by round' : 'Historical scores by round'}</h3>
       {/* Capped rather than flex-1: at full dashboard width, one bar per
           generation stretched into wide slabs that read as blocks, not a chart. */}
       <div className="flex items-end gap-6">
