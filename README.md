@@ -15,6 +15,12 @@ Evolve your ads.
 
 Advolve generates ad variations, reviews the actual pixels, then uses an evolutionary algorithm guided by TRIBE neural scoring to breed stronger creatives generation over generation. Images use OpenAI; videos use Seedance 2.0 through Pika. Every take is scored by predicted cortical response, not heuristics.
 
+Hosted app: [Advolve on Cloudflare](https://advolve-web.advolve-logan.workers.dev)
+(Access sign-in required). See [deployment, credentials and live test results](docs/CLOUDFLARE_DEPLOY.md).
+General production workloads require Workers Paid; the small live tests were
+recovered under Free's limits. Neural scores represent predicted cortical
+response, not validated emotion, engagement or conversion performance.
+
 ## Key Features
 
 ### Evolutionary Creative Engine
@@ -116,12 +122,12 @@ Open http://localhost:3001. The Next.js frontend proxies API requests to the bac
 | `OPENAI_TEXT_MODEL` | Text model override (default: `gpt-6-astra`) | No |
 | `OPENAI_IMAGE_MODEL` | Image model override (default: `gpt-image-2.5-flare`) | No |
 | `PIKA_API_KEY` | Seedance 2.0 video generation | No |
-| `BASETEN_TRIBE_ENDPOINT` | TRIBE neural scoring endpoint | No |
-| `BASETEN_API_KEY` | Baseten API authentication | No |
+| `BASETEN_TRIBE_ENDPOINT` | TRIBE neural scoring endpoint | Yes, unless `TRIBE_SCORE_URL` is set |
+| `BASETEN_API_KEY` | Baseten API authentication | Yes for Baseten |
 | `TRIBE_SCORE_URL` | Alternative scoring URL (same JSON contract) | No |
 | `TRIBE_TOKEN` | Optional Bearer token for scoring | No |
 | `FFMPEG_BIN` | FFmpeg executable path (default: `ffmpeg`) | No |
-| `MEDIA_SERVICE_URL` | DeepGaze attention service (Baseten) | No |
+| `MEDIA_SERVICE_URL` | DeepGaze and FFmpeg service (Baseten) | Cloudflare video and attention maps |
 
 ## Repo Layout
 

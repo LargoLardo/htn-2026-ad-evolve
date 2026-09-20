@@ -24,7 +24,10 @@ Live upload took 4.0s for the image and 5.1s for the video; a video range reques
 returned 206 with the correct bytes. DeepGaze attention took 2.9s after startup;
 video frame/audio extraction took 1.8s. Remote Images masking was checked pixel
 by pixel: the specified rectangle is exactly gray and all outside pixels are
-unchanged. Full impact-map validation is in progress.
+unchanged. The complete original + winner map job took **23m 16s**, including
+deployment pauses and sharing the serial inference queue with the video test.
+All 11 regions (4 original, 7 winner) have finite impact deltas, both attention
+images and map artifacts are saved, and the hosted maps UI displays them.
 
 The one-round video run completed in **20m 5s**, including recovery from Free's
 50-external-subrequest limit. Existing Seedance job IDs were reused, with no
