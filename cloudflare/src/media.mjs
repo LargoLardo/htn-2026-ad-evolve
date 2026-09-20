@@ -88,13 +88,16 @@ export function createMedia(env, accountId) {
         if (![info.width, info.height].every(n => Number.isInteger(n) && n >= 16 && n <= 4096)) throw new HttpError(400, 'Media dimensions must be between 16 and 4096 pixels.');
         const output = await env.IMAGES.input((await env.MEDIA.get(source.temp)).body).output({ format: 'image/png', anim: false });
         normalized = await bytesToObject(output.response().body, MAX_IMAGE_BYTES, 'image/png');
+        // EXIF orientation can swap dimensions during normalization. Map boxes
+        // must use the stored PNG's geometry, not the uploaded JPEG's headers.
+        info = await env.IMAGES.info((await env.MEDIA.get(normalized.temp)).body);
         info = { width: info.width, height: info.height, duration: 10, hasAudio: false };
       }
       const key = store.key(`${normalized.hash}.${ext}`);
       await env.MEDIA.put(key, (await env.MEDIA.get(normalized.temp)).body, { httpMetadata: { contentType: mediaType === 'video' ? 'video/mp4' : 'image/png' } });
       const asset = { url: `/assets/${normalized.hash}.${ext}`, mediaHash: normalized.hash, mediaType, mimeType: mediaType === 'video' ? 'video/mp4' : 'image/png', kind, prompt, ...(model ? { model } : {}) };
       if (mediaType === 'video') info = await callMediaService(env, store, asset, 'inspect');
-      Object.assign(asset, info);
+      Object.assign(asset, { width: info.width, height: info.height, duration: info.duration, hasAudio: info.hasAudio === true });
       if (![asset.width, asset.height].every(n => Number.isInteger(n) && n >= 16 && n <= 4096) || !Number.isFinite(asset.duration) || asset.duration < 1 || asset.duration > 60.1) throw new HttpError(400, 'Invalid media dimensions or duration.');
       await store.putJson(`metadata/${asset.mediaHash}.json`, asset);
       return asset;
