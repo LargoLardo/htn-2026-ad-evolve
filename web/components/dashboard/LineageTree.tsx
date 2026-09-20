@@ -22,6 +22,10 @@ const NODE_H = 186;
 const GAP_X = 30;
 const GAP_Y = 88;
 
+/** How far above a child its parents' lines meet. Short enough that the joined
+ *  stem reads as belonging to the child, long enough to be visible as a stem. */
+const JUNCTION_RISE = 26;
+
 /** An "Elite retained" child is the parent copied, not a new creative. It gets a
  *  dashed edge so a converged run looks converged instead of productive. */
 const isCarriedOver = (candidate: Candidate) => /elite/i.test(candidate.mutation ?? '');
@@ -75,27 +79,46 @@ export default function LineageTree({
       });
     });
 
-    const edges: { from: string; to: string; carried: boolean }[] = [];
+    // One link per child, not one per parent.
+    //
+    // Crossover takes two parents and makes one child. Drawn as two separate
+    // edges that reads as two independent claims, A made this and C made this,
+    // when the truth is that A and C together made it, and you could only find
+    // that out by hovering. Grouping by child lets the two lines meet at a
+    // junction and descend as a single stem, so "these two made this one" is
+    // one object on screen instead of two.
+    const links = [];
     for (const { candidate } of position.values()) {
-      for (const parent of candidate.parents ?? []) {
-        if (position.has(parent)) edges.push({ from: parent, to: candidate.id, carried: isCarriedOver(candidate) });
-      }
+      const parentIds = (candidate.parents ?? []).filter(id => position.has(id));
+      if (!parentIds.length) continue;
+      const child = position.get(candidate.id)!;
+      const childX = child.x + NODE_W / 2;
+      links.push({
+        childId: candidate.id,
+        parentIds,
+        carried: isCarriedOver(candidate),
+        childX, childY: child.y,
+        junctionX: childX, junctionY: child.y - JUNCTION_RISE,
+        parents: parentIds.map(id => {
+          const parent = position.get(id)!;
+          return { x: parent.x + NODE_W / 2, y: parent.y + NODE_H };
+        }),
+      });
     }
 
     return {
       width,
       height: rows.length * NODE_H + (rows.length - 1) * GAP_Y,
       nodes: [...position.values()],
-      edges: edges.map(edge => {
-        const a = position.get(edge.from)!, b = position.get(edge.to)!;
-        return { ...edge, x1: a.x + NODE_W / 2, y1: a.y + NODE_H, x2: b.x + NODE_W / 2, y2: b.y };
-      }),
+      links,
     };
   }, [run]);
 
   if (!layout.nodes.length) return null;
 
-  const carried = layout.edges.filter(edge => edge.carried).length;
+  // Counted per creative rather than per line, now that two parents produce one
+  // link: "2 of 15 links" would no longer match anything visible on screen.
+  const carried = layout.links.filter(link => link.carried).length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -108,9 +131,18 @@ export default function LineageTree({
           <svg width="22" height="8" aria-hidden><line x1="0" y1="4" x2="22" y2="4" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" /></svg>
           elite carried over unchanged
         </span>
+        <span className="flex items-center gap-1.5">
+          <svg width="24" height="14" aria-hidden>
+            <path d="M 2 1 C 2 6, 12 6, 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M 22 1 C 22 6, 12 6, 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <line x1="12" y1="8" x2="12" y2="13" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="12" cy="8" r="2" fill="currentColor" />
+          </svg>
+          two parents crossed into one child
+        </span>
         {carried > 0 && (
           <span className="text-foreground-light">
-            {carried} of {layout.edges.length} links are copies, not new creatives.
+            {carried} of {layout.links.length} descendants are copies, not new creatives.
           </span>
         )}
       </div>
@@ -123,22 +155,51 @@ export default function LineageTree({
             height={layout.height}
             aria-hidden
           >
-            {layout.edges.map((edge, i) => {
-              const related = !hovered || edge.from === hovered || edge.to === hovered;
+            {layout.links.map(link => {
+              const related = !hovered || link.childId === hovered || link.parentIds.includes(hovered);
+              const joined = link.parents.length > 1;
+              // A single parent runs straight to the child: there is nothing to
+              // join, and a stem would imply a merge that did not happen.
+              const endX = joined ? link.junctionX : link.childX;
+              const endY = joined ? link.junctionY : link.childY;
+              const stroke = related && hovered ? 2.5 : 1.5;
               return (
-              <path
-                key={i}
-                // Vertical cubic: leaves the parent downward and enters the child
-                // downward, so crossings stay legible when one parent has many
-                // children, which is the common case here.
-                d={`M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.y1 + GAP_Y / 2}, ${edge.x2} ${edge.y2 - GAP_Y / 2}, ${edge.x2} ${edge.y2}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={related && hovered ? 2.5 : 1.5}
-                strokeDasharray={edge.carried ? '3 3' : undefined}
-                className="transition-opacity duration-150"
-                opacity={related ? (hovered ? 1 : 0.55) : 0.08}
-              />
+                <g
+                  key={link.childId}
+                  className="transition-opacity duration-150"
+                  opacity={related ? (hovered ? 1 : 0.55) : 0.08}
+                  strokeDasharray={link.carried ? '3 3' : undefined}
+                >
+                  {link.parents.map((parent, i) => {
+                    // Vertical cubic: leaves the parent downward and arrives
+                    // downward, so crossings stay legible when one parent has
+                    // many children, which is the common case here.
+                    const bend = Math.max(16, (endY - parent.y) / 2);
+                    return (
+                      <path
+                        key={i}
+                        d={`M ${parent.x} ${parent.y} C ${parent.x} ${parent.y + bend}, ${endX} ${endY - bend}, ${endX} ${endY}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={stroke}
+                      />
+                    );
+                  })}
+                  {joined && (
+                    <>
+                      <path
+                        d={`M ${link.junctionX} ${link.junctionY} L ${link.childX} ${link.childY}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={stroke}
+                        strokeDasharray={undefined}
+                      />
+                      {/* The dot is what makes the merge a single event rather
+                          than two lines that happen to touch. */}
+                      <circle cx={link.junctionX} cy={link.junctionY} r={3} fill="currentColor" strokeDasharray={undefined} />
+                    </>
+                  )}
+                </g>
               );
             })}
           </svg>
