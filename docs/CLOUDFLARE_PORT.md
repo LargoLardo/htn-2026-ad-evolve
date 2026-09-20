@@ -17,9 +17,23 @@ data/evaluation-cache/       provider response cache
 ```
 
 Two long jobs exist. An evolution run is about 25 minutes, dominated by Percept
-calls at roughly 119 seconds each. A map build is 37 sequential Percept calls,
-so 70 minutes or more per image. Both currently live in the memory of the one
-Node process and die with it.
+calls at roughly 119 seconds each. A map build is one call per occluded region.
+Both currently live in the memory of the one Node process and die with it, and
+neither can be paused or resumed, which is the single biggest obstacle to this
+port and also to the product.
+
+Two changes to the pipeline are decided and should land before or alongside the
+port, because they change the cost model the architecture has to serve:
+
+- **Occlusion is per detected object, not per grid cell.** The vision model
+  returns up to 12 labelled boxes, each is occluded once, so a map is about 13
+  calls rather than 37. Each pass hides a whole real thing, so the signal is
+  large, and the result is directly readable as "the headline is dead weight"
+  rather than as an average over cells.
+- **A round ends at a gate** with two policies, auto and manual. Auto resolves
+  immediately and is today's behaviour. Manual waits for a human to choose
+  parent nodes, kill nodes and edit the note sent to the next round. One code
+  path, one flag, never two implementations.
 
 ## Portability, module by module
 
@@ -111,14 +125,30 @@ and their difference is meaningless.
 
 Neither job fits a request. Both fit `Workflow`:
 
-- **Map build.** One `step.do()` per occluder position. 37 steps, each about
-  two minutes, each independently retryable. Step results are durable, so a
-  half finished map survives a deploy, and a rehearsed demo can replay from
-  completed steps instantly. `onProgress` in `lib/impact-map.mjs` becomes a
-  write to the DO, which pushes to SSE subscribers.
-- **Evolution run.** One step per stage per generation. `lib/evolution.mjs`
-  already calls `update(stage, message)` at exactly these boundaries, so the
-  step boundaries are already marked in the source.
+- **Map build.** One `step.do()` per occluded object, so about 13 steps, each
+  independently retryable. Step results are durable, so a half finished map
+  survives a deploy, and a rehearsed demo can replay from completed steps
+  instantly. `onProgress` in `lib/impact-map.mjs` becomes a write to the DO,
+  which pushes to SSE subscribers.
+- **Evolution run.** One step per stage per round. `lib/evolution.mjs` already
+  calls `update(stage, message)` at exactly these boundaries, so the step
+  boundaries are already marked in the source.
+
+### The gate
+
+At the end of each round the run stops and asks who chooses the parent nodes.
+In auto it answers itself; in manual it waits for a person. On Workers that is
+`waitForEvent`, and the pending decision lives in the run's Durable Object so a
+browser can post to it and a reload can find it.
+
+This is the reason the port is worth doing rather than a cost of it. Today the
+whole run is one `async` function, so there is no point at which it can stop
+and be resumed, and a human step is therefore impossible. Making the run a
+sequence of durable steps delivers the pause as a side effect.
+
+Only breeding blocks on the gate. Rendering and scoring for the round that has
+already been generated continue, so the GPU does not sit idle while a person
+thinks.
 
 Percept calls go through a **Queue** with `max_concurrency` matched to the
 Baseten replica count. This is the piece that fixes tonight's failure mode
@@ -140,7 +170,7 @@ The keep alive still matters.
 3. DeepGaze onto Baseten, swap the transport inside `buildAttentionMap`.
 4. Images binding for `maskCell`. The map pipeline now runs without Node.
 5. Map build as a Workflow, Percept through a Queue.
-6. Evolution run as a Workflow.
+6. Evolution run as a Workflow, with the gate as `waitForEvent`.
 7. Video, or an explicit decision to drop it from the Worker build.
 
 Steps 1 to 4 give a working maps product on Cloudflare. Steps 5 and 6 make it
@@ -157,6 +187,12 @@ durable rather than merely hosted.
   that a baseline matches. Whatever serialises it must stay byte identical.
 - **Request duration.** A single Percept call is about 119 seconds. Subrequest
   and wall clock limits apply per step, so keep one stimulus per step.
-- **Nothing here removes the GPU dependency.** Percept is 119 seconds on an L4
-  wherever it is called from, and a 37 pass map is over an hour. Cloudflare
-  changes where the orchestration lives, not what the physics cost.
+- **Scoring every candidate, not a shortlist.** Today only three takes per
+  round reach Percept, which is why half the lineage has no score. Scoring all
+  of them is the intent, and it multiplies the Queue's load by roughly three.
+- **Nothing here removes the GPU dependency.** Percept is 119 seconds per
+  stimulus on an L4 wherever it is called from. The one real lever is the
+  stimulus itself: a still image is currently inflated into a 10 second video,
+  about 250 identical frames, and every frame is scored. A shorter clip is
+  close to a linear saving and is worth measuring before sizing anything here.
+  Cloudflare changes where the orchestration lives, not what the physics cost.
