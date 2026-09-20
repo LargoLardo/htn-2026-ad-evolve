@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, cells, disagreements, gap, normalize, reduceToGrid, windows } from '../lib/grid.mjs';
+import { accumulate, cells, disagreements, gap, normalize, reduceToGrid, scoreElements, windows } from '../lib/grid.mjs';
 
 test('cells tile the image exactly, including sizes the grid does not divide', () => {
   for (const [width, height, n] of [[1024, 1024, 3], [1000, 777, 3], [999, 1001, 5], [512, 512, 4]]) {
@@ -74,4 +74,19 @@ test('edge cells are scaled by their real coverage, not the window area', () => 
 
 test('an occluder wider than the grid is rejected rather than silently clamped', () => {
   assert.throws(() => windows(300, 300, 3, 4), /Occluder/);
+});
+
+test('an element scores from the cells it covers, weighted by overlap', () => {
+  // 300x300 on a 3x3 grid: cells are 100x100.
+  const impact = [0, 0, 0, 0, 0, 0, 1, 1, 1];  // only the bottom row matters
+  const headline = { label: 'headline', x: 0, y: 2 / 3, w: 1, h: 1 / 3 };
+  const logo = { label: 'logo', x: 0, y: 0, w: 1 / 3, h: 1 / 3 };
+  // Half in the cold middle row, half in the hot bottom row.
+  const straddler = { label: 'straddler', x: 0, y: 0.5, w: 1, h: 1 / 3 };
+
+  const [a, b, c] = scoreElements([headline, logo, straddler], { impact }, 300, 300, 3);
+  assert.equal(a.impact, 1, 'an element on the hot row takes the hot value');
+  assert.equal(b.impact, 0, 'an element away from it stays cold');
+  assert.ok(Math.abs(c.impact - 0.5) < 1e-9, 'a straddling element is weighted by area, not by its centre');
+  assert.ok(Math.abs(a.coverage - 1 / 3) < 1e-4, 'coverage is the fraction of the ad it occupies');
 });
