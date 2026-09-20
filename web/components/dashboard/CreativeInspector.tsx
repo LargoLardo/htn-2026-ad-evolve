@@ -68,7 +68,7 @@ export default function CreativeInspector({ candidate, product, originalLabel, o
           <p className="text-xs text-foreground-lighter">Four equally weighted Glasser families. 50 is the zero-z midpoint. Predicted cortical response is not validated emotion or ad effectiveness. {neural.provenance}</p>
         </section>}
         {!review && neural?.source !== 'tribe-percept' && <p className="text-xs text-foreground-lighter">Historical scores remain in the run export.</p>}
-        <div><h3 className="label">Where this came from</h3><p className="text-xs text-foreground-lighter">Generation {candidate.round} · {candidate.mutation}<br />{candidate.parents.length ? `Parents: ${candidate.parents.join(', ')}` : 'Initial population'}</p></div>
+        <div><h3 className="label">Where this came from</h3><p className="text-xs text-foreground-lighter">Round {candidate.round} · {candidate.mutation}<br />{candidate.parents.length ? `Parent nodes: ${candidate.parents.join(', ')}` : 'Initial population'}</p></div>
         {candidate.asset?.prompt && <details className="text-xs"><summary className="focus-ring cursor-pointer text-foreground-light">Render prompt</summary><p className="mt-2 text-foreground-lighter">{candidate.asset.prompt}</p></details>}
       </div>
     </div>}

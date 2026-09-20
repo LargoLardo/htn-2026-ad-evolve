@@ -73,7 +73,7 @@ export default function ExperimentsPage({ duplicateOf }: { duplicateOf?: Brief |
             <h2 className="text-lg text-foreground">No experiments yet</h2>
             <p className="max-w-[46ch] text-sm text-foreground-lighter">
               Describe a product and Advolve will generate a population of ad concepts,
-              screen them, then recombine the survivors across generations.
+              screen them, then recombine the survivors across rounds.
             </p>
             <Button
               type="button"

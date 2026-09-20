@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 const STAGE_TEXT: Record<RunStage, string> = {
   queued: 'Queued.',
   research: 'Researching the brief…',
-  generating: 'Generating creative genomes…',
+  generating: 'Generating creative traits…',
   screening: 'Reviewing media, copy and claims…',
   rendering: 'Rendering the shortlist…',
   scoring: 'Scoring rendered candidates…',
@@ -298,7 +298,7 @@ function FitnessChart({ run }: { run: Run }) {
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface-100 p-5">
-      <h3 className="label">{isPercept(run) ? 'Percept score by generation' : 'Historical scores by generation'}</h3>
+      <h3 className="label">{isPercept(run) ? 'Percept score by round' : 'Historical scores by round'}</h3>
       {/* Capped rather than flex-1: at full dashboard width, one bar per
           generation stretched into wide slabs that read as blocks, not a chart. */}
       <div className="flex items-end gap-6">
@@ -316,7 +316,7 @@ function FitnessChart({ run }: { run: Run }) {
                 title={`Mean ${score(round.mean)}`}
               />
             </div>
-            <span className="text-[10px] text-foreground-lighter">Gen {round.number}</span>
+            <span className="text-[10px] text-foreground-lighter">Round {round.number}</span>
           </div>
         ))}
       </div>

@@ -97,11 +97,11 @@ export default function Sidebar() {
           <h2 className="text-2xl text-foreground">A population of ideas. A visible lineage.</h2>
           <ol className="flex list-decimal flex-col gap-2 pl-5">
             <li><strong className="font-normal text-foreground">Research once.</strong> Turn the product, audience and goal into evidence-linked creative hypotheses.</li>
-            <li><strong className="font-normal text-foreground">Generate genomes.</strong> Give every concept a hook, visual approach, emotional angle, proof point, call to action, palette, motion and audio.</li>
+            <li><strong className="font-normal text-foreground">Generate traits.</strong> Give every concept a hook, visual approach, emotional angle, proof point, call to action, palette, motion and audio.</li>
             <li><strong className="font-normal text-foreground">Generate and review media.</strong> Create images or Seedance video takes. Review actual pixels, copy and claims; video review samples six frames and transcribes audio. Shortlist reviewed takes and retain provisional drafts if all fail.</li>
             <li><strong className="font-normal text-foreground">Evaluate and select.</strong> Score shortlisted takes with Percept’s four Glasser families against a fixed original baseline. Images become 10-second videos. Selection takes the largest predicted response; emotion priorities guide concepts only. Read that number as response magnitude, not quality.</li>
-            <li><strong className="font-normal text-foreground">Recombine and mutate.</strong> Preserve the best candidate, mix parent genes and change exactly one gene per child.</li>
-            <li><strong className="font-normal text-foreground">Review the finalists.</strong> Inspect genomes, compare generations and download the drafts.</li>
+            <li><strong className="font-normal text-foreground">Recombine and mutate.</strong> Preserve the best candidate, mix parent-node traits and change exactly one trait per child.</li>
+            <li><strong className="font-normal text-foreground">Review the finalists.</strong> Inspect traits, compare rounds and download the drafts.</li>
           </ol>
           <h3 className="text-lg text-foreground">What the score means</h3>
           <p>
