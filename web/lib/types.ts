@@ -62,6 +62,9 @@ export interface NeuralScore {
   /** Length of each region trace, and the stimulus seconds it covers. */
   frames?: number;
   duration?: number;
+  /** Each Glasser parcel's own trace, before its family averages them. Absent on
+   *  runs scored before per-parcel traces existed. */
+  parcels?: { key: string; name: string; values: number[] }[];
 }
 
 export interface Scores {
