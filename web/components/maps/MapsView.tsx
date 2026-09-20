@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { assetLink } from '@/lib/api';
 import type { Run } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -171,17 +171,7 @@ export default function MapsView({ run }: { run: Run }) {
               cellular because each cell is one GPU call and there is no finer
               signal to show. */}
           {layer === 'attention' ? (
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundColor: 'rgb(199, 240, 120)',
-                WebkitMaskImage: `url(/api/maps/${chosen}/attention.png)`,
-                maskImage: `url(/api/maps/${chosen}/attention.png)`,
-                WebkitMaskSize: '100% 100%',
-                maskSize: '100% 100%',
-                opacity: 0.78,
-              }}
-            />
+            <AttentionHeatmap src={`/api/maps/${chosen}/attention.png`} />
           ) : (
             <div
               className="absolute inset-0 grid"
@@ -213,16 +203,79 @@ export default function MapsView({ run }: { run: Run }) {
   );
 }
 
-/** Attention and impact are one-sided, so they ramp in a single hue. The gap is
- *  signed and needs a diverging ramp with a neutral middle, or "no disagreement"
- *  would look like an extreme. */
+/**
+ * Magma, the standard perceptually uniform heat ramp.
+ *
+ * A single hue at varying alpha, which this used to be, is unreadable over a
+ * photograph: the ad's own colours show through and a bright ad region reads
+ * hotter than a dim one regardless of its value. A ramp that moves through
+ * hue AND lightness together stays legible on any background, and the order
+ * dark to bright survives greyscale printing and colour blindness.
+ */
+const MAGMA: [number, number, number][] = [
+  [12, 8, 38], [87, 16, 110], [187, 55, 84], [249, 142, 9], [252, 255, 164],
+];
+
+function ramp(t: number): [number, number, number] {
+  const x = Math.min(1, Math.max(0, t)) * (MAGMA.length - 1);
+  const i = Math.min(MAGMA.length - 2, Math.floor(x)), f = x - i;
+  const a = MAGMA[i], b = MAGMA[i + 1];
+  return [0, 1, 2].map(c => Math.round(a[c] + (b[c] - a[c]) * f)) as [number, number, number];
+}
+
+/** The gap is signed, so it needs a diverging ramp with a neutral middle or
+ *  "the two maps agree" would read as an extreme. Orange against cyan is the
+ *  highest-contrast opposed pair that survives both colour blindness and a
+ *  photographic background. */
 function shade(value: number, layer: Layer) {
   if (layer === 'gap') {
-    return value >= 0
-      ? `rgba(255, 138, 76, ${Math.min(0.72, Math.abs(value) * 0.72)})`
-      : `rgba(120, 160, 255, ${Math.min(0.72, Math.abs(value) * 0.72)})`;
+    const weight = Math.min(0.85, Math.abs(value) * 0.85);
+    return value >= 0 ? `rgba(255, 130, 40, ${weight})` : `rgba(34, 205, 225, ${weight})`;
   }
-  return `rgba(199, 240, 120, ${Math.min(0.72, value * 0.72)})`;
+  const [r, g, b] = ramp(value);
+  // Floor the alpha so a cold cell still reads as measured rather than absent.
+  return `rgba(${r}, ${g}, ${b}, ${0.25 + Math.min(0.62, value * 0.62)})`;
+}
+
+/**
+ * Paint the full-resolution attention density through the ramp.
+ *
+ * The artifact PNG carries density in its alpha channel, so it was previously
+ * drawn as a CSS mask over one flat colour. That threw away every value
+ * between "nothing" and "peak". Reading the pixels back and mapping each one
+ * through the ramp keeps the resolution we already paid for.
+ */
+function AttentionHeatmap({ src }: { src: string }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (cancelled) return;
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = pixels.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const density = data[i + 3] / 255;
+        const [r, g, b] = ramp(density);
+        data[i] = r; data[i + 1] = g; data[i + 2] = b;
+        // Keep the faint end translucent so the ad stays visible underneath.
+        data[i + 3] = Math.round(Math.min(1, density * 1.15) * 235);
+      }
+      context.putImageData(pixels, 0, 0);
+    };
+    image.src = src;
+    return () => { cancelled = true; };
+  }, [src]);
+
+  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 size-full" />;
 }
 
 function Legend({ layer }: { layer: Layer }) {
@@ -230,8 +283,8 @@ function Legend({ layer }: { layer: Layer }) {
   if (layer === 'impact') return <Note title="What moves the response">Occlude a cell, rescore with Percept, measure the drop. Brighter means occluding it changed the predicted response more.</Note>;
   return (
     <Note title="Attention minus impact">
-      <span className="text-[#ff8a4c]">Orange</span> is looked at but does nothing.{' '}
-      <span className="text-[#78a0ff]">Blue</span> drives the response without drawing the eye. Faint means the two agree.
+      <span className="text-[#ff8228]">Orange</span> is looked at but does nothing.{' '}
+      <span className="text-[#22cde1]">Cyan</span> drives the response without drawing the eye. Faint means the two agree.
     </Note>
   );
 }
