@@ -10,6 +10,11 @@ const POLL_MS = 700;
 // the run itself is only running/completed/cancelled/failed.
 export const isRunning = (run: Run | null) => run?.status === 'running';
 
+/** A run waiting at a round gate keeps its 'running' status and only changes
+ *  stage, so polling already continues. Naming the stage here keeps that true if
+ *  the engine ever parks a gated run under a different status. */
+const keepPolling = (run: Run) => run.status === 'running' || run.stage === 'awaiting-selection';
+
 /**
  * Polls a run while it is active.
  *
@@ -38,7 +43,7 @@ export function useRun() {
         const next = await getRun(id);
         if (ticket !== sequence.current) return;
         setRun(next);
-        if (next.status === 'running') {
+        if (keepPolling(next)) {
           timer.current = setTimeout(() => poll(id), POLL_MS);
         }
       } catch (caught) {
@@ -57,7 +62,7 @@ export function useRun() {
       stop();
       setError(null);
       setRun(next);
-      if (next.status === 'running') {
+      if (keepPolling(next)) {
         timer.current = setTimeout(() => poll(next.id), POLL_MS);
       }
     },
