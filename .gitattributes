@@ -2,6 +2,9 @@
 # Windows checkout rewrites their newlines, and the recorded SHA-256 then fails.
 worker/assets/glasser-fsaverage5.json -text
 worker/assets/glasser-fsaverage5.sha256 -text
+# The scoring contract hash is the SHA-256 of this file's bytes, and the
+# deployed worker rejects any run whose hash disagrees with its own.
+worker/neural_spec.json -text
 
 # Raw little-endian mesh buffers read by the web brain view.
 *.f32 -text -diff
