@@ -63,6 +63,20 @@ export default function MapsView({ run }: { run: Run }) {
   // dozen boxes on a busy ad the labels necessarily overlap, and the way to
   // read one of them is to ask for one, not to draw fewer.
   const [focused, setFocused] = useState<string | null>(null);
+
+  // Zoom on the map itself. Elements on a busy ad can be a few percent of the
+  // image, so reading one at container width means squinting at it. Everything
+  // here is one transform on a wrapper, so the overlays stay registered with
+  // the ad without any of them knowing about the zoom.
+  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
+  const dragging = useRef<{ x: number; y: number } | null>(null);
+  const reset = () => setZoom({ scale: 1, x: 0, y: 0 });
+  const step = (factor: number) => setZoom(current => {
+    const scale = Math.min(6, Math.max(1, current.scale * factor));
+    // Snapping back to the origin at 1x stops a zoomed-out image drifting off
+    // centre with no way to tell it is offset rather than cropped.
+    return scale === 1 ? { scale, x: 0, y: 0 } : { ...current, scale };
+  });
   const [job, setJob] = useState<MapsJob | null>(null);
   const [building, setBuilding] = useState(false);
 
@@ -272,7 +286,32 @@ export default function MapsView({ run }: { run: Run }) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="relative overflow-hidden rounded-lg border border-border">
+        <div
+          className="relative overflow-hidden rounded-lg border border-border"
+          onWheelCapture={event => {
+            if (!event.ctrlKey && !event.metaKey && zoom.scale === 1) return;
+            step(event.deltaY < 0 ? 1.15 : 1 / 1.15);
+          }}
+          onPointerDown={event => {
+            if (zoom.scale === 1) return;
+            dragging.current = { x: event.clientX - zoom.x, y: event.clientY - zoom.y };
+          }}
+          onPointerMove={event => {
+            if (!dragging.current) return;
+            setZoom(current => ({ ...current, x: event.clientX - dragging.current!.x, y: event.clientY - dragging.current!.y }));
+          }}
+          onPointerUp={() => { dragging.current = null; }}
+          onPointerLeave={() => { dragging.current = null; }}
+        >
+          <div className="absolute right-2 top-2 z-10 flex gap-1">
+            <MapButton label="Zoom out" onClick={() => step(1 / 1.4)}>-</MapButton>
+            <MapButton label="Zoom in" onClick={() => step(1.4)}>+</MapButton>
+            {zoom.scale !== 1 && <MapButton label="Reset zoom" onClick={reset}>Reset</MapButton>}
+          </div>
+          <div
+            className={cn('origin-top-left', zoom.scale > 1 && 'cursor-grab active:cursor-grabbing')}
+            style={{ transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})` }}
+          >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {src && <img src={src} alt="Ad being mapped" className="block w-full" />}
 
@@ -323,6 +362,7 @@ export default function MapsView({ run }: { run: Run }) {
               </div>
             );
           })}
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 text-sm">
@@ -567,5 +607,21 @@ function Bar({ label, value, tint }: { label: string; value: number; tint: strin
         />
       </span>
     </span>
+  );
+}
+
+
+function MapButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      onPointerDown={event => event.stopPropagation()}
+      className="focus-ring min-w-7 rounded-md border border-border bg-surface-100/90 px-2 py-1 text-xs text-foreground-light backdrop-blur transition-colors hover:text-foreground"
+    >
+      {children}
+    </button>
   );
 }

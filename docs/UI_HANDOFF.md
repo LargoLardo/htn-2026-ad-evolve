@@ -104,18 +104,15 @@ width and height, not by `width`/`height` from the artifact.
 
 ## Known problems, not yet fixed
 
-1. **Element labels overlap.** Twelve boxes on a busy ad stack their labels.
-   Hovering a row in the ranked list should highlight only that box.
-2. **No zoom on the map.** The lineage tree has pan and zoom; the map does not.
-3. **Node score is still a delta.** Cards read `-46.4 vs original`. It should
-   be a 0-100 bar with the original ticked at 50, so nothing is signed and
-   "further right is better" is the only rule.
-4. **Provenance is a paragraph.** Should be one sentence with the methodology
-   behind a hover.
-5. **Old artifacts have a different shape.** Anything built before object
+1. **Old artifacts have a different shape.** Anything built before object
    occlusion has `grid` and cell arrays. The UI falls back to `element.impact`
    when `order` is missing, so they still render. Do not add more fallbacks,
    delete the old artifacts instead.
+2. **Zoom is per view.** The lineage tree and the map each implement their own
+   pan and zoom. If a third view needs it, extract a hook rather than writing
+   a third copy.
+3. **The map has no keyboard path.** Zoom and pan are pointer only. The tree
+   pans to a focused node; the map does not.
 
 ## Things that will look like bugs and are not
 
