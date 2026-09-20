@@ -19,9 +19,20 @@ const IMPACT_METRICS = [
 
 type Layer = 'attention' | 'impact' | 'gap';
 
+interface MapElement {
+  label: string;
+  kind: string;
+  x: number; y: number; w: number; h: number;
+  coverage: number;
+  attention: number | null;
+  impact: number | null;
+  gap: number | null;
+}
+
 interface MapsArtifact {
   mediaHash: string;
   grid: number;
+  elements?: MapElement[];
   attention: { map: number[]; source: string; provenance: string };
   impact: { maps: Record<string, number[]>; calls: number; provenance: string } | null;
   impactError?: string | null;
@@ -39,6 +50,7 @@ export default function MapsView({ run }: { run: Run }) {
   const [error, setError] = useState<string | null>(null);
   const [layer, setLayer] = useState<Layer>('gap');
   const [metric, setMetric] = useState<string>('attention_salience');
+  const [showLabels, setShowLabels] = useState(true);
 
   /** Every still in the run that could have maps: the uploaded original first,
    *  then finalists, then everything else. Most runs have no uploaded original,
@@ -116,6 +128,7 @@ export default function MapsView({ run }: { run: Run }) {
 
   const grid = data.grid;
   const hasImpact = Boolean(data.impact);
+  const elements = data.elements ?? [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -145,6 +158,20 @@ export default function MapsView({ run }: { run: Run }) {
           >
             {options.map(item => <option key={item.hash} value={item.hash}>{item.label}</option>)}
           </select>
+        )}
+
+        {elements.length > 0 && (
+          <button
+            onClick={() => setShowLabels(value => !value)}
+            className={cn(
+              'focus-ring rounded-md border px-3 py-1.5 text-sm transition-colors',
+              showLabels
+                ? 'border-brand-400 bg-brand-200 text-brand'
+                : 'border-border bg-surface-100 text-foreground-lighter hover:text-foreground'
+            )}
+          >
+            Labels
+          </button>
         )}
 
         {layer !== 'attention' && hasImpact && (
@@ -179,13 +206,32 @@ export default function MapsView({ run }: { run: Run }) {
             >
               {values.map((value, index) => (
                 <div key={index} className="relative border border-white/10" style={{ background: shade(value, layer) }}>
-                  <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] tabular-nums text-white">
-                    {layer === 'gap' ? (value >= 0 ? '+' : '') : ''}{value.toFixed(2)}
-                  </span>
+                  {/* Per-cell numbers stop being readable once cells are small,
+                      and at that point the element labels carry the meaning. */}
+                  {grid <= 4 && (
+                    <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[10px] tabular-nums text-white">
+                      {layer === 'gap' ? (value >= 0 ? '+' : '') : ''}{value.toFixed(2)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           )}
+
+          {showLabels && elements.map((element, index) => (
+            <div
+              key={index}
+              className="pointer-events-none absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
+              style={{
+                left: `${element.x * 100}%`, top: `${element.y * 100}%`,
+                width: `${element.w * 100}%`, height: `${element.h * 100}%`,
+              }}
+            >
+              <span className="absolute left-0 top-0 max-w-full truncate bg-black/80 px-1 text-[10px] text-white">
+                {element.label}
+              </span>
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-col gap-3 text-sm">
@@ -194,6 +240,28 @@ export default function MapsView({ run }: { run: Run }) {
             <p className="rounded-md border border-border-muted bg-surface-75 px-3 py-2 text-xs text-foreground-lighter">
               Only the attention map is available. {data.impactError ?? 'The impact map needs the Percept worker.'}
             </p>
+          )}
+          {elements.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <p className="label">What each part is doing</p>
+              <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
+                {elements.map((element, index) => (
+                  <li key={index} className="flex items-baseline justify-between gap-2 bg-surface-100 px-2.5 py-1.5">
+                    <span className="min-w-0 flex-1 truncate text-xs text-foreground" title={element.label}>{element.label}</span>
+                    <span
+                      className="shrink-0 text-[11px] tabular-nums"
+                      style={{ color: (element.gap ?? 0) >= 0 ? '#ff8228' : '#22cde1' }}
+                      title={(element.gap ?? 0) >= 0 ? 'Looked at more than it moves the response' : 'Moves the response more than it is looked at'}
+                    >
+                      {(element.gap ?? 0) >= 0 ? '+' : ''}{(element.gap ?? 0).toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-foreground-lighter">
+                Sorted worst first. Positive is dead weight: looked at, does not move the response.
+              </p>
+            </div>
           )}
           <p className="text-xs text-foreground-lighter">{data.attention.provenance}</p>
           {data.impact && <p className="text-xs text-foreground-lighter">{data.impact.provenance}</p>}
