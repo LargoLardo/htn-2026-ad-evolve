@@ -10,9 +10,9 @@ import tempfile
 import numpy as np
 
 try:
-    from .percept_score import checked_predictions, decode_reference, encode_reference, summarize
+    from .percept_score import checked_predictions, decode_reference, encode_reference, parcel_traces, summarize
 except ImportError:
-    from percept_score import checked_predictions, decode_reference, encode_reference, summarize
+    from percept_score import checked_predictions, decode_reference, encode_reference, parcel_traces, summarize
 
 ROOT = Path(__file__).resolve().parent
 MAX_BYTES = 50 * 1024 * 1024
@@ -121,7 +121,8 @@ def score_batch(request, model, cache, runtime):
             baseline = encode_reference(predictions, candidate['media_hash'], prediction_hash, contract_hash, runtime)
             reference = decode_reference(baseline, contract_hash, runtime)
         score = summarize(predictions, reference, tr=tr)
-        score.update(source='tribe-percept', contractHash=contract_hash, version=spec['version'],
+        score.update(parcels=parcel_traces(predictions, reference),
+            source='tribe-percept', contractHash=contract_hash, version=spec['version'],
             baselineHash=baseline['hash'], baselineMediaHash=baseline['mediaHash'], confidence=None,
             provenance='Percept scoring: original-media temporal z scores, bilateral Glasser parcel means, four equally weighted families. Predicted cortical response; not a validated emotion or conversion score.')
         results.append(dict(id=candidate['id'], media_hash=candidate['media_hash'], neural=score,
