@@ -3,23 +3,10 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { createRun, errorMessage, uploadMedia } from '@/lib/api';
-import { EMOTIONS, type Brief, type Config, type Emotion, type Run } from '@/lib/types';
+import { type Brief, type Config, type Run } from '@/lib/types';
 import MediaPreview from './MediaPreview';
 import { cn } from '@/lib/utils';
 
-const EMOTION_COLORS: Record<Emotion, string> = {
-  joy: '#d8b484',
-  trust: '#9eb68e',
-  curiosity: '#b6a2ca',
-  desire: '#d0a895',
-};
-
-const DEFAULT_WEIGHTS: Record<Emotion, number> = {
-  joy: 30,
-  trust: 20,
-  curiosity: 35,
-  desire: 15,
-};
 
 const field =
   'w-full rounded-md border border-border-control bg-control px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand-highlight';
@@ -39,7 +26,7 @@ export default function BriefForm({
   onStarted: (run: Run) => void;
 }) {
   const uid = useId();
-  const [weights, setWeights] = useState(initial?.weights ?? DEFAULT_WEIGHTS);
+  const [tone, setTone] = useState(initial?.tone ?? '');
   const [rounds, setRounds] = useState(initial?.rounds ?? 3);
   const [population, setPopulation] = useState(initial?.population ?? 8);
   const [shortlist, setShortlist] = useState(initial?.shortlist ?? 3);
@@ -65,10 +52,6 @@ export default function BriefForm({
     if (submitting || disabled || uploading) return;
     setError(null);
 
-    if (!Object.values(weights).some(Boolean)) {
-      setError('Choose at least one emotional priority above zero.');
-      return;
-    }
 
     const data = new FormData(event.currentTarget);
     const brief: Brief = {
@@ -76,7 +59,7 @@ export default function BriefForm({
       description: String(data.get('description') ?? '').trim(),
       audience: String(data.get('audience') ?? '').trim(),
       goal: String(data.get('goal') ?? '').trim(),
-      weights,
+      tone,
       rounds,
       population,
       shortlist,
@@ -171,37 +154,22 @@ export default function BriefForm({
         />
       </div>
 
-      <fieldset className="flex flex-col gap-2 border-t border-border pt-4">
-        <legend className="sr-only">Emotional priorities</legend>
-        <p className="text-xs text-foreground-lighter">Creative direction only; these priorities do not change the neural score.</p>
-        {EMOTIONS.map((emotion) => (
-          <div key={emotion} className="grid grid-cols-[14px_72px_1fr_28px] items-center gap-2">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-full"
-              style={{ background: EMOTION_COLORS[emotion] }}
-            />
-            <label htmlFor={`${uid}-w-${emotion}`} className="text-sm capitalize text-foreground-light">
-              {emotion}
-            </label>
-            <input
-              id={`${uid}-w-${emotion}`}
-              type="range"
-              min={0}
-              max={100}
-              value={weights[emotion]}
-              disabled={locked}
-              onChange={(event) =>
-                setWeights((current) => ({ ...current, [emotion]: Number(event.target.value) }))
-              }
-              className="h-[3px] w-full accent-brand"
-            />
-            <output className="text-right text-xs tabular-nums text-foreground-lighter">
-              {weights[emotion]}
-            </output>
-          </div>
-        ))}
-      </fieldset>
+      <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+        <label htmlFor={`${uid}-tone`} className="text-sm text-foreground-light">
+          Tone
+        </label>
+        <input
+          id={`${uid}-tone`}
+          name="tone"
+          maxLength={500}
+          disabled={locked}
+          value={tone}
+          onChange={(event) => setTone(event.target.value)}
+          placeholder="e.g. Energetic, trustworthy, a little playful"
+          className={field}
+        />
+        <p className="text-xs text-foreground-lighter">Creative direction only; does not change the neural score.</p>
+      </div>
 
       <div className="grid grid-cols-3 gap-3 border-t border-border pt-4">
         <div className="flex flex-col gap-1.5">
